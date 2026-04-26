@@ -72,10 +72,21 @@ These decisions are part of the specification and must be treated as default imp
 
 - Use Kotlin.
 - Use Spring Boot.
+- Use Maven as the backend build tool.
+- Use `application.yml` for Spring configuration.
+- Use Spring AI in a dedicated later step for native AI capabilities inside the Kotlin backend.
 - Use Spring Web for REST endpoints.
 - Use Spring Data JPA for persistence.
 - Use PostgreSQL as the primary database.
 - Use Docker Compose to run local infrastructure.
+
+### Container Execution Policy
+
+- Any project container must be declared in the root `docker-compose.yml`.
+- Do not use ad hoc `docker run` containers as part of the project workflow.
+- When a service is containerized, it must be started through `docker compose`.
+- If the local environment already provides a compatible dependency, prefer using it.
+- If an additional runtime or tool must be downloaded, prefer downloading it inside a Docker Compose service so it can be removed cleanly later.
 
 ### Multi-agent System
 
@@ -140,8 +151,11 @@ Create the base repository structure and a working Kotlin backend.
 
 - Create the initial folder structure.
 - Create the Spring Boot Kotlin project in `backend-kotlin/`.
+- Use Maven for the backend project.
+- Use `application.yml` for backend configuration.
 - Create `docker-compose.yml`.
 - Add PostgreSQL service in Docker Compose.
+- Add backend service in Docker Compose for container-based execution and validation.
 - Configure backend connection to PostgreSQL.
 - Expose a `GET /health` endpoint.
 
@@ -316,7 +330,49 @@ API -> Agent -> MCP -> DB -> response
 
 - The Kotlin API returns the final agent output successfully.
 
-## Step 9 - Frontend Setup
+## Step 9 - Spring AI Integration in Kotlin Backend
+
+### Goal
+
+Add Spring AI to the Kotlin backend as a real project capability.
+
+### Required tasks
+
+- Add Spring AI dependencies to the Kotlin backend.
+- Create at least one backend service that uses Spring AI.
+- Connect Spring AI to the same LLM strategy already defined for the project.
+- Reuse project data or backend services as context for prompts when reasonable.
+- Expose at least one dedicated Spring AI endpoint in the Kotlin backend.
+
+### Provider rule
+
+Plan A:
+
+- Use Groq as the first provider attempted through the project LLM strategy.
+
+Plan B:
+
+- Use Ollama only if Groq cannot be made to work in this environment.
+
+Constraint:
+
+- Do not introduce a second independent LLM strategy only for Spring AI.
+- Spring AI must follow the same provider fallback policy already defined in this specification.
+
+### Suggested use cases
+
+- financial summary generation
+- transaction insight generation
+- backend-native explanation endpoint
+
+### Validation criteria
+
+- Spring AI is integrated successfully into the Kotlin backend.
+- At least one endpoint returns AI-generated output through Spring AI.
+- The feature uses real project context rather than a static prompt only.
+- Spring AI has a real use inside the project, even if the initial implementation is simple.
+
+## Step 10 - Frontend Setup
 
 ### Goal
 
@@ -341,7 +397,7 @@ Create the base frontend application with the minimum stack required for a polis
 - Frontend project running locally.
 - Base visual structure ready for dashboard pages.
 
-## Step 10 - Initial Dashboard Interface
+## Step 11 - Initial Dashboard Interface
 
 ### Goal
 
@@ -368,7 +424,7 @@ Create a simple but visually polished dashboard for the financial system.
 - The layout works on desktop and mobile widths.
 - The visual result is good without adding unnecessary frontend tooling.
 
-## Step 11 - Frontend to Backend Integration
+## Step 12 - Frontend to Backend Integration
 
 ### Goal
 

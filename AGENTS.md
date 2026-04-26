@@ -2,41 +2,48 @@
 
 ## Status
 
-This is the initial version of `AGENTS.md`.
+This file tracks the real implementation state of the project.
 
-Nothing has been implemented yet.
+Step 1 has been completed.
 
-This file exists only to establish the progress-tracking structure required by `specs.md`.
-
-Frontend is now part of the project specification, but it has not been started yet.
+Frontend is part of the project specification, but it has not been started yet.
 
 ## Completed Steps
 
-- None
+- Step 1 - Initial Project Setup
 
 ## Current Step
 
-- No step has started yet
+- No active implementation step at the moment
 
 ## Next Steps
 
-- Step 1 - Initial Project Setup
-- Step 9 - Frontend Setup
+- Step 2 - Transactions CRUD
 
 ## Decisions Taken
 
 - `specs.md` was created as the source of truth for project execution
 - Progress tracking will be updated in this file after implementation begins
 - Frontend is part of the official scope
+- Spring AI is part of the official scope
 - Frontend Plan A is `React + TypeScript + Vite + Tailwind CSS`
 - `shadcn/ui` is not part of the initial frontend implementation
 - Additional frontend tooling should only be added if the minimal stack becomes insufficient
+- Spring AI will be implemented in a dedicated backend step after the main Kotlin to Python integration is working
+- Backend uses Kotlin with Spring Boot and Maven
+- Spring backend configuration uses `application.yml`
+- All project containers must be declared and executed through the root `docker-compose.yml`
+- PostgreSQL and backend execution were validated through Docker Compose
+- Local Java should be preferred when compatible, but Docker Compose is the fallback for runtimes that are not compatible with the Kotlin toolchain
 
 ## Problems Found
 
-- None so far
+- Local JDK 26 is not compatible with Kotlin 1.9.25 for Maven compilation in this project context
+- Docker Compose with JDK 21 was used to keep Step 1 executable and testable
 
 ## Notes
 
-- Project is still at the initial planning stage
-- No code, infrastructure, backend, frontend, agents, or database setup has been implemented yet
+- Base repository structure exists
+- PostgreSQL is available through Docker Compose
+- Backend is available in `backend-kotlin/`
+- `GET /health` responds with database-backed status when the backend service is running

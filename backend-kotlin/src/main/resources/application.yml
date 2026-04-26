@@ -1,0 +1,21 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: financial-hub-backend
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/financial_hub}
+    username: ${SPRING_DATASOURCE_USERNAME:financial_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:financial_pass}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
