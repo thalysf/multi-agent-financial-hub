@@ -22,7 +22,7 @@ services:
     image: maven:3.9.11-eclipse-temurin-21
     container_name: financial-hub-backend
     working_dir: /workspace/backend-kotlin
-    command: sh -lc "chmod +x mvnw && ./mvnw spring-boot:run"
+    command: sh -lc "chmod +x mvnw && ./mvnw clean spring-boot:run"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/financial_hub
       SPRING_DATASOURCE_USERNAME: financial_user
