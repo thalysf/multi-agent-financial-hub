@@ -4,7 +4,7 @@
 
 This file tracks the real implementation state of the project.
 
-Step 1, Step 2, Step 3, and Step 4 have been completed.
+Step 1, Step 2, Step 3, Step 4, and Step 5 have been completed.
 
 Frontend is part of the project specification, but it has not been started yet.
 
@@ -14,6 +14,7 @@ Frontend is part of the project specification, but it has not been started yet.
 - Step 2 - Transactions CRUD
 - Step 3 - Backend Modularization
 - Step 4 - Investments Module
+- Step 5 - MCP Server
 
 ## Current Step
 
@@ -21,7 +22,7 @@ Frontend is part of the project specification, but it has not been started yet.
 
 ## Next Steps
 
-- Step 5 - MCP Server
+- Step 6 - Multi-Agent System
 
 ## Decisions Taken
 
@@ -49,12 +50,16 @@ Frontend is part of the project specification, but it has not been started yet.
 - Transaction request/response classes live in a dedicated `dto` subpackage
 - Investment request/response classes live in a dedicated `dto` subpackage
 - Exception handlers (`RestControllerAdvice`) are kept in each module's `exception` package
+- The MCP server uses direct PostgreSQL access to expose real project data through MCP tools
+- MCP server database configuration is driven by environment variables with defaults aligned to the root `docker-compose.yml`
+- Step 5 validation uses an in-memory MCP client session to execute the mandatory tools locally against the real PostgreSQL database
 
 ## Problems Found
 
 - Local JDK 26 is not compatible with Kotlin 1.9.25 for Maven compilation in this project context
 - Docker Compose with JDK 21 was used to keep Step 1 executable and testable
 - Backend test execution inside the Maven container must use the Compose datasource host instead of `localhost`
+- The `pip` command is not directly available in the local PowerShell environment, so Python package installation should use `python -m pip`
 
 ## Notes
 
@@ -69,3 +74,5 @@ Frontend is part of the project specification, but it has not been started yet.
 - Step 3 validation confirmed module registration plus continued backend operation after modularization
 - Investment CRUD backend structure now exists in `backend-kotlin/src/main/kotlin/com/financialhub/backend/investments/`
 - Step 4 validation confirmed investment CRUD through Spring Boot integration tests and manual `POST /investments` plus `GET /investments`
+- MCP server implementation now exists in `mcp-server/` with `get_transactions`, `add_transaction`, and `get_investments`
+- Step 5 validation confirmed mandatory MCP tool registration plus real PostgreSQL reads and writes through `python smoke_test.py`
