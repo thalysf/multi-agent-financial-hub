@@ -4,7 +4,7 @@ from decimal import Decimal
 import psycopg
 from psycopg.rows import dict_row
 
-from config import DatabaseSettings, load_database_settings
+from financial_hub_mcp.config import DatabaseSettings, load_database_settings
 
 
 ALLOWED_TRANSACTION_TYPES = {"INCOME", "EXPENSE"}

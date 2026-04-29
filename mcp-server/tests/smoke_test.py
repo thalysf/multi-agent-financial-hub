@@ -5,13 +5,13 @@ from uuid import uuid4
 
 from mcp.shared.memory import create_connected_server_and_client_session
 
-from server import mcp
+from financial_hub_mcp.server import mcp
 
 
 MANDATORY_TOOLS = {"get_transactions", "add_transaction", "get_investments"}
 
 
-async def main() -> None:
+async def run_smoke_test() -> None:
     async with create_connected_server_and_client_session(mcp, raise_exceptions=True) as client_session:
         tools = await client_session.list_tools()
         tool_names = {tool.name for tool in tools.tools}
@@ -68,5 +68,9 @@ async def main() -> None:
         print(json.dumps(report, indent=2))
 
 
+def main() -> None:
+    asyncio.run(run_smoke_test())
+
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

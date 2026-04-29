@@ -2,6 +2,31 @@
 
 Python MCP server for Step 5 of the project specification.
 
+## Project layout
+
+The server uses a standard Python `src/` layout:
+
+```text
+mcp-server/
+|-- pyproject.toml
+|-- requirements.txt
+|-- src/
+|   `-- financial_hub_mcp/
+|       |-- server.py
+|       |-- tools.py
+|       |-- database.py
+|       |-- schemas.py
+|       `-- config.py
+`-- tests/
+    `-- smoke_test.py
+```
+
+- `server.py` creates and runs the FastMCP server.
+- `tools.py` registers the MCP tools.
+- `database.py` isolates PostgreSQL access.
+- `schemas.py` defines structured tool responses.
+- `config.py` reads environment-driven configuration.
+
 ## Tools
 
 - `get_transactions`
@@ -28,7 +53,13 @@ Copy `.env.example` into your own environment if you need to override any value.
 ```powershell
 cd mcp-server
 python -m pip install -r requirements.txt
-python server.py
+python -m financial_hub_mcp
+```
+
+You can also run the installed console script:
+
+```powershell
+financial-hub-mcp
 ```
 
 ## Smoke test
@@ -37,5 +68,5 @@ The smoke test opens an in-memory MCP client session against the server, creates
 
 ```powershell
 cd mcp-server
-python smoke_test.py
+python tests/smoke_test.py
 ```

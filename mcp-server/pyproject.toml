@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "financial-hub-mcp"
+version = "0.1.0"
+description = "MCP server exposing Financial Hub project data to agents."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp[cli]==1.18.0",
+    "psycopg[binary]==3.2.12",
+    "pydantic==2.12.3",
+]
+
+[project.scripts]
+financial-hub-mcp = "financial_hub_mcp.server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

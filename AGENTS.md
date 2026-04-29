@@ -53,6 +53,7 @@ Frontend is part of the project specification, but it has not been started yet.
 - The MCP server uses direct PostgreSQL access to expose real project data through MCP tools
 - MCP server database configuration is driven by environment variables with defaults aligned to the root `docker-compose.yml`
 - Step 5 validation uses an in-memory MCP client session to execute the mandatory tools locally against the real PostgreSQL database
+- MCP server Python code is organized as an installable `src/` layout package named `financial_hub_mcp`
 
 ## Problems Found
 
@@ -75,4 +76,5 @@ Frontend is part of the project specification, but it has not been started yet.
 - Investment CRUD backend structure now exists in `backend-kotlin/src/main/kotlin/com/financialhub/backend/investments/`
 - Step 4 validation confirmed investment CRUD through Spring Boot integration tests and manual `POST /investments` plus `GET /investments`
 - MCP server implementation now exists in `mcp-server/` with `get_transactions`, `add_transaction`, and `get_investments`
-- Step 5 validation confirmed mandatory MCP tool registration plus real PostgreSQL reads and writes through `python smoke_test.py`
+- Step 5 validation confirmed mandatory MCP tool registration plus real PostgreSQL reads and writes through `python tests/smoke_test.py`
+- MCP server structure separates server creation, tool registration, database access, schemas, and configuration
