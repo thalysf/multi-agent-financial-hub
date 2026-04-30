@@ -101,6 +101,12 @@ All currently defined specification steps have been completed.
 - The AI desk submits prompts to `POST /ai/analyze` and displays the routed agent response plus tools used
 - Frontend summary cards are calculated from live backend data instead of static preview arrays
 - Backend CORS is configured in `backend-kotlin/src/main/kotlin/com/financialhub/backend/config/WebConfig.kt` for `http://localhost:5173` and `http://127.0.0.1:5173`
+- Post-spec frontend navigation uses hash-backed modules without adding a routing library
+- Available frontend modules are `overview`, `transactions`, `investments`, and `ai-desk`
+- Sidebar items and primary dashboard actions now switch active modules instead of only scrolling to sections
+- Transaction creation is available through a frontend modal that calls `POST /transactions`
+- Investment creation is available through a frontend modal that calls `POST /investments`
+- Ultra-wide layout now removes the narrow 2xl max-width cap and uses wider grids to better fill large monitors
 
 ## Problems Found
 
@@ -179,6 +185,15 @@ All currently defined specification steps have been completed.
 - Live validation confirmed `POST /ai/analyze` returns a Groq-generated agent response through Kotlin backend, Python agents, MCP, and PostgreSQL
 - Post-Step 12 cleanup removed unused Vite/React scaffold assets and replaced the favicon with a Financial Hub SVG
 - Post-cleanup frontend validation passed again with `npm run build` and `npm run lint`
+- Post-spec frontend evolution added hash-backed module navigation in `frontend-react/src/lib/modules.ts`
+- Post-spec frontend evolution added a reusable `Modal` primitive in `frontend-react/src/components/ui/Modal.tsx`
+- Post-spec frontend evolution added frontend create helpers for transactions and investments in `frontend-react/src/lib/api.ts`
+- Post-spec frontend evolution validation passed with `npm run build`
+- Post-spec frontend evolution validation passed with `npm run lint`
+- Post-spec runtime validation confirmed `GET http://localhost:5173/#transactions` returns HTTP 200
+- Post-spec runtime validation confirmed the same backend requests used by frontend modals can create a transaction and an investment successfully
+- Post-spec runtime validation confirmed `POST /ai/analyze` still works after the frontend changes
+- Temporary validation records `Frontend Modal Test` and `FRONT11` were removed after runtime validation
 - Manual end-to-end validation seeded:
   - transaction: `EXPENSE`, amount `125.75`, category `Groceries`, date `2026-04-29`
   - investment: asset `VALE3`, quantity `900.0000`, averagePrice `84.32`
@@ -189,6 +204,6 @@ All currently defined specification steps have been completed.
   - Specialized agent calls MCP tools (`get_transactions` or `get_investments`)
   - MCP reads PostgreSQL
   - Groq generates the final natural-language response from real tool output
-- Current recommended next step is post-spec hardening: add frontend tests, improve empty/loading states, and consider CRUD forms
+- Current recommended next step is post-spec hardening: add frontend tests, improve edit/delete flows, and consider dedicated detail pages if the modules grow
 - The frontend should remain intentionally polished, intuitive, and responsive
 - For the next session, read `specs.md` and this `AGENTS.md` first; all currently defined steps are complete

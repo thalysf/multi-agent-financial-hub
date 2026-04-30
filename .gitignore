@@ -456,5 +456,7 @@ buildNumber.properties
 ## Custom
 setup.md
 docker/*
+!frontend-react/src/lib/
+!frontend-react/src/lib/**
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,python,java,kotlin,intellij,pycharm,react

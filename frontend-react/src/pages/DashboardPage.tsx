@@ -1,23 +1,52 @@
-import { type FormEvent, startTransition, useDeferredValue, useEffect, useState } from 'react'
+import {
+  type FormEvent,
+  startTransition,
+  useDeferredValue,
+  useEffect,
+  useState,
+} from 'react'
 import { aiSuggestions } from '../data/dashboard'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
+import { Modal } from '../components/ui/Modal'
 import { Table } from '../components/ui/Table'
 import {
   type AiAnalyzeResponse,
+  type CreateInvestmentInput,
+  type CreateTransactionInput,
   type Investment,
   type Transaction,
   analyzeFinances,
+  createInvestment,
+  createTransaction,
   getInvestments,
   getTransactions,
 } from '../lib/api'
 import { formatCompactCurrency, formatCurrency, formatDate } from '../lib/format'
+import type { ModuleId } from '../lib/modules'
+
+type DashboardPageProps = {
+  activeModule: ModuleId
+  onNavigate: (module: ModuleId) => void
+}
 
 type SummaryTone = 'cream' | 'ink' | 'lagoon' | 'clay'
+type ModalType = 'transaction' | 'investment' | null
 
-export function DashboardPage() {
+const today = new Date().toISOString().slice(0, 10)
+
+async function loadDashboardData() {
+  const [transactionsResult, investmentsResult] = await Promise.all([
+    getTransactions(),
+    getInvestments(),
+  ])
+
+  return { investmentsResult, transactionsResult }
+}
+
+export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [investments, setInvestments] = useState<Investment[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -27,6 +56,20 @@ export function DashboardPage() {
   const [aiResponse, setAiResponse] = useState<AiAnalyzeResponse | null>(null)
   const [aiError, setAiError] = useState<string | null>(null)
   const [isAiLoading, setIsAiLoading] = useState(false)
+  const [activeModal, setActiveModal] = useState<ModalType>(null)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [transactionForm, setTransactionForm] = useState<CreateTransactionInput>({
+    amount: '',
+    category: '',
+    date: today,
+    type: 'EXPENSE',
+  })
+  const [investmentForm, setInvestmentForm] = useState<CreateInvestmentInput>({
+    asset: '',
+    averagePrice: '',
+    quantity: '',
+  })
 
   const deferredFilter = useDeferredValue(transactionFilter)
   const normalizedFilter = deferredFilter.trim().toLowerCase()
@@ -47,24 +90,32 @@ export function DashboardPage() {
   )
 
   const summaryCards: Array<{
+    action: () => void
+    actionLabel: string
     detail: string
     label: string
     tone: SummaryTone
     value: string
   }> = [
     {
+      action: () => onNavigate('transactions'),
+      actionLabel: 'Open transactions',
       label: 'Net cash flow',
       value: formatCompactCurrency(incomeTotal - expenseTotal),
       detail: `${transactions.length} transactions loaded from Kotlin`,
       tone: 'cream',
     },
     {
+      action: () => onNavigate('investments'),
+      actionLabel: 'Open investments',
       label: 'Portfolio cost',
       value: formatCompactCurrency(investmentCostTotal),
       detail: `${investments.length} investments from PostgreSQL`,
       tone: 'lagoon',
     },
     {
+      action: () => onNavigate('ai-desk'),
+      actionLabel: 'Open AI desk',
       label: 'AI readiness',
       value: aiResponse ? aiResponse.routedTo : 'Ready',
       detail: aiResponse ? aiResponse.routingReason : 'Python agents available through backend',
@@ -75,12 +126,9 @@ export function DashboardPage() {
   useEffect(() => {
     let ignore = false
 
-    async function loadDashboard() {
+    async function load() {
       try {
-        const [transactionsResult, investmentsResult] = await Promise.all([
-          getTransactions(),
-          getInvestments(),
-        ])
+        const { investmentsResult, transactionsResult } = await loadDashboardData()
 
         if (!ignore) {
           startTransition(() => {
@@ -100,12 +148,63 @@ export function DashboardPage() {
       }
     }
 
-    loadDashboard()
+    load()
 
     return () => {
       ignore = true
     }
   }, [])
+
+  async function refreshDashboard() {
+    setIsLoading(true)
+    setLoadError(null)
+
+    try {
+      const { investmentsResult, transactionsResult } = await loadDashboardData()
+      setTransactions(transactionsResult)
+      setInvestments(investmentsResult)
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Could not load dashboard data')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  async function handleTransactionSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setIsSaving(true)
+    setFormError(null)
+
+    try {
+      const created = await createTransaction(transactionForm)
+      setTransactions((current) => [created, ...current])
+      setTransactionForm({ amount: '', category: '', date: today, type: 'EXPENSE' })
+      setActiveModal(null)
+      onNavigate('transactions')
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'Could not create transaction')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function handleInvestmentSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setIsSaving(true)
+    setFormError(null)
+
+    try {
+      const created = await createInvestment(investmentForm)
+      setInvestments((current) => [created, ...current])
+      setInvestmentForm({ asset: '', averagePrice: '', quantity: '' })
+      setActiveModal(null)
+      onNavigate('investments')
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'Could not create investment')
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   async function handleAiSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -126,35 +225,35 @@ export function DashboardPage() {
     }
   }
 
+  function openModal(type: Exclude<ModalType, null>) {
+    setFormError(null)
+    setActiveModal(type)
+  }
+
   return (
     <>
-      <header className="rounded-[2rem] border border-white/70 bg-cream/82 p-4 shadow-xl shadow-moss/10 backdrop-blur md:p-6">
-        <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+      <header className="rounded-[2rem] border border-white/70 bg-cream/82 p-4 shadow-xl shadow-moss/10 backdrop-blur md:p-6 2xl:p-8">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div>
             <p className="text-sm font-bold uppercase tracking-[0.28em] text-clay">
               Modular finance cockpit
             </p>
-            <h2 className="mt-3 max-w-2xl font-display text-4xl font-black leading-[0.95] tracking-[-0.08em] text-ink sm:text-6xl">
+            <h2 className="mt-3 max-w-5xl font-display text-4xl font-black leading-[0.95] tracking-[-0.08em] text-ink sm:text-6xl 2xl:text-7xl">
               Finances, agents, and signals in one calm dashboard.
             </h2>
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-ink/60 sm:text-base">
+            <p className="mt-4 max-w-3xl text-sm leading-6 text-ink/60 sm:text-base 2xl:text-lg 2xl:leading-8">
               Live data from Kotlin, PostgreSQL, Python agents, MCP tools, Groq,
               and Spring AI.
             </p>
           </div>
-          <div className="grid gap-2 sm:grid-cols-2 md:min-w-72 md:grid-cols-1">
-            <a
-              className="inline-flex items-center justify-center rounded-full bg-ink px-5 py-3 text-sm font-black text-cream shadow-lg shadow-ink/20 transition hover:-translate-y-0.5 hover:bg-moss"
-              href="#ai-desk"
-            >
-              Ask AI
-            </a>
-            <a
-              className="inline-flex items-center justify-center rounded-full bg-cream px-5 py-3 text-sm font-black text-ink shadow-md shadow-moss/10 transition hover:-translate-y-0.5 hover:bg-white"
-              href="#transactions"
-            >
-              View transactions
-            </a>
+          <div className="grid gap-2 sm:grid-cols-3 xl:min-w-[34rem]">
+            <Button onClick={() => onNavigate('ai-desk')}>Ask AI</Button>
+            <Button onClick={() => openModal('transaction')} variant="secondary">
+              Add transaction
+            </Button>
+            <Button onClick={() => openModal('investment')} variant="secondary">
+              Add investment
+            </Button>
           </div>
         </div>
       </header>
@@ -166,34 +265,214 @@ export function DashboardPage() {
         </Card>
       ) : null}
 
-      <section className="grid gap-4 md:grid-cols-3" id="overview">
-        {summaryCards.map((card) => (
-          <Card key={card.label} tone={card.tone}>
-            <p className="text-sm font-bold opacity-75">{card.label}</p>
-            <p className="mt-5 font-display text-4xl font-black tracking-[-0.07em]">
-              {isLoading ? 'Loading' : card.value}
-            </p>
-            <p className="mt-3 text-sm leading-6 opacity-70">{card.detail}</p>
-          </Card>
-        ))}
-      </section>
+      {activeModule === 'overview' ? renderOverviewModule() : null}
+      {activeModule === 'transactions' ? renderTransactionsModule() : null}
+      {activeModule === 'investments' ? renderInvestmentsModule() : null}
+      {activeModule === 'ai-desk' ? renderAiModule() : null}
 
-      <section className="grid gap-4 xl:grid-cols-[1.18fr_0.82fr]">
+      <Modal
+        description="This creates a real row through the Kotlin backend and refreshes the live dashboard state."
+        isOpen={activeModal === 'transaction'}
+        onClose={() => setActiveModal(null)}
+        title="New transaction"
+      >
+        <form className="grid gap-3" onSubmit={handleTransactionSubmit}>
+          <label className="grid gap-2 text-sm font-black text-ink/70">
+            Type
+            <select
+              className="w-full rounded-2xl border border-ink/10 bg-white/72 px-4 py-3 text-sm font-semibold text-ink outline-none focus:border-moss/40 focus:ring-4 focus:ring-moss/10"
+              onChange={(event) =>
+                setTransactionForm((current) => ({
+                  ...current,
+                  type: event.target.value as CreateTransactionInput['type'],
+                }))
+              }
+              value={transactionForm.type}
+            >
+              <option value="EXPENSE">Expense</option>
+              <option value="INCOME">Income</option>
+            </select>
+          </label>
+          <label className="grid gap-2 text-sm font-black text-ink/70">
+            Category
+            <Input
+              onChange={(event) =>
+                setTransactionForm((current) => ({ ...current, category: event.target.value }))
+              }
+              placeholder="Groceries, Salary, Education..."
+              required
+              value={transactionForm.category}
+            />
+          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-2 text-sm font-black text-ink/70">
+              Amount
+              <Input
+                min="0.01"
+                onChange={(event) =>
+                  setTransactionForm((current) => ({ ...current, amount: event.target.value }))
+                }
+                placeholder="125.75"
+                required
+                step="0.01"
+                type="number"
+                value={transactionForm.amount}
+              />
+            </label>
+            <label className="grid gap-2 text-sm font-black text-ink/70">
+              Date
+              <Input
+                onChange={(event) =>
+                  setTransactionForm((current) => ({ ...current, date: event.target.value }))
+                }
+                required
+                type="date"
+                value={transactionForm.date}
+              />
+            </label>
+          </div>
+          {formError ? <p className="text-sm font-bold text-clay">{formError}</p> : null}
+          <Button disabled={isSaving} type="submit">
+            {isSaving ? 'Saving...' : 'Create transaction'}
+          </Button>
+        </form>
+      </Modal>
+
+      <Modal
+        description="This creates a real investment through the Kotlin backend and updates portfolio cards."
+        isOpen={activeModal === 'investment'}
+        onClose={() => setActiveModal(null)}
+        title="New investment"
+      >
+        <form className="grid gap-3" onSubmit={handleInvestmentSubmit}>
+          <label className="grid gap-2 text-sm font-black text-ink/70">
+            Asset
+            <Input
+              onChange={(event) =>
+                setInvestmentForm((current) => ({
+                  ...current,
+                  asset: event.target.value.toUpperCase(),
+                }))
+              }
+              placeholder="VALE3"
+              required
+              value={investmentForm.asset}
+            />
+          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-2 text-sm font-black text-ink/70">
+              Quantity
+              <Input
+                min="0.0001"
+                onChange={(event) =>
+                  setInvestmentForm((current) => ({ ...current, quantity: event.target.value }))
+                }
+                placeholder="900.0000"
+                required
+                step="0.0001"
+                type="number"
+                value={investmentForm.quantity}
+              />
+            </label>
+            <label className="grid gap-2 text-sm font-black text-ink/70">
+              Average price
+              <Input
+                min="0.01"
+                onChange={(event) =>
+                  setInvestmentForm((current) => ({
+                    ...current,
+                    averagePrice: event.target.value,
+                  }))
+                }
+                placeholder="84.32"
+                required
+                step="0.01"
+                type="number"
+                value={investmentForm.averagePrice}
+              />
+            </label>
+          </div>
+          {formError ? <p className="text-sm font-bold text-clay">{formError}</p> : null}
+          <Button disabled={isSaving} type="submit">
+            {isSaving ? 'Saving...' : 'Create investment'}
+          </Button>
+        </form>
+      </Modal>
+    </>
+  )
+
+  function renderOverviewModule() {
+    return (
+      <>
+        <section className="grid gap-4 md:grid-cols-3 2xl:gap-6">
+          {summaryCards.map((card) => (
+            <Card className="2xl:min-h-56" key={card.label} tone={card.tone}>
+              <p className="text-sm font-bold opacity-75">{card.label}</p>
+              <p className="mt-5 font-display text-4xl font-black tracking-[-0.07em] 2xl:text-5xl">
+                {isLoading ? 'Loading' : card.value}
+              </p>
+              <p className="mt-3 text-sm leading-6 opacity-70">{card.detail}</p>
+              <Button className="mt-6" onClick={card.action} variant={card.tone === 'cream' ? 'primary' : 'ghost'}>
+                {card.actionLabel}
+              </Button>
+            </Card>
+          ))}
+        </section>
+
+        <section className="grid gap-4 xl:grid-cols-3 2xl:gap-6">
+          <ModuleActionCard
+            description="Review cash movement, filter entries, or create a new transaction."
+            label="Cash module"
+            onOpen={() => onNavigate('transactions')}
+            onPrimaryAction={() => openModal('transaction')}
+            primaryAction="New transaction"
+            title="Transactions"
+          />
+          <ModuleActionCard
+            description="Inspect portfolio base, registered assets, and average cost."
+            label="Portfolio module"
+            onOpen={() => onNavigate('investments')}
+            onPrimaryAction={() => openModal('investment')}
+            primaryAction="New investment"
+            title="Investments"
+          />
+          <ModuleActionCard
+            description="Send a question to the orchestrator and let agents use MCP tools."
+            label="AI module"
+            onOpen={() => onNavigate('ai-desk')}
+            onPrimaryAction={() => onNavigate('ai-desk')}
+            primaryAction="Ask AI"
+            title="AI desk"
+          />
+        </section>
+      </>
+    )
+  }
+
+  function renderTransactionsModule() {
+    return (
+      <section className="grid gap-4 2xl:grid-cols-[1.35fr_0.65fr] 2xl:gap-6">
         <Card id="transactions">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <Badge>Transactions</Badge>
-              <h3 className="mt-3 font-display text-3xl font-black tracking-[-0.07em]">
-                Recent movement
+              <h3 className="mt-3 font-display text-3xl font-black tracking-[-0.07em] 2xl:text-4xl">
+                Cash movement module
               </h3>
             </div>
-            <div className="w-full sm:w-60">
+            <div className="grid w-full gap-2 sm:w-auto sm:grid-cols-[16rem_auto_auto]">
               <Input
                 aria-label="Filter transactions"
                 onChange={(event) => setTransactionFilter(event.target.value)}
                 placeholder="Filter entries"
                 value={transactionFilter}
               />
+              <Button onClick={() => openModal('transaction')} variant="secondary">
+                New
+              </Button>
+              <Button onClick={refreshDashboard} variant="secondary">
+                Refresh
+              </Button>
             </div>
           </div>
           <div className="mt-5">
@@ -232,55 +511,94 @@ export function DashboardPage() {
           </div>
         </Card>
 
-        <Card id="investments" tone="ink">
+        <Card tone="clay">
+          <Badge tone="cream">Quick insight</Badge>
+          <p className="mt-5 font-display text-4xl font-black tracking-[-0.08em]">
+            {formatCurrency(incomeTotal - expenseTotal)}
+          </p>
+          <p className="mt-3 text-sm leading-6 text-cream/76">
+            Net cash flow from the currently loaded backend data.
+          </p>
+          <Button className="mt-6" onClick={() => onNavigate('ai-desk')} variant="ghost">
+            Ask about cash flow
+          </Button>
+        </Card>
+      </section>
+    )
+  }
+
+  function renderInvestmentsModule() {
+    return (
+      <section className="grid gap-4 2xl:grid-cols-[0.8fr_1.2fr] 2xl:gap-6">
+        <Card tone="ink">
           <Badge tone="cream">Investments</Badge>
-          <h3 className="mt-3 font-display text-3xl font-black tracking-[-0.07em]">
-            Portfolio cards
+          <h3 className="mt-3 font-display text-3xl font-black tracking-[-0.07em] 2xl:text-4xl">
+            Portfolio module
           </h3>
-          <div className="mt-5 space-y-3">
+          <p className="mt-5 font-display text-5xl font-black tracking-[-0.08em]">
+            {formatCompactCurrency(investmentCostTotal)}
+          </p>
+          <p className="mt-3 text-sm leading-6 text-cream/66">
+            Registered position cost calculated from quantity times average price.
+          </p>
+          <div className="mt-6 grid gap-2 sm:grid-cols-2">
+            <Button onClick={() => openModal('investment')} variant="ghost">
+              New investment
+            </Button>
+            <Button onClick={refreshDashboard} variant="ghost">
+              Refresh
+            </Button>
+          </div>
+        </Card>
+
+        <Card>
+          <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
             {investments.map((investment, index) => (
               <article
-                className="rounded-[1.5rem] border border-cream/10 bg-cream/8 p-4"
+                className="rounded-[1.5rem] border border-ink/8 bg-white/58 p-4"
                 key={investment.id}
               >
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`h-10 w-10 rounded-full ${
-                        index % 2 === 0 ? 'bg-lagoon' : 'bg-clay'
-                      }`}
-                    />
-                    <div>
-                      <p className="font-display text-xl font-black tracking-[-0.05em]">
-                        {investment.asset}
-                      </p>
-                      <p className="text-sm text-cream/56">
-                        {Number(investment.quantity).toLocaleString('en-US')} units
-                      </p>
-                    </div>
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`h-10 w-10 rounded-full ${
+                      index % 2 === 0 ? 'bg-lagoon' : 'bg-clay'
+                    }`}
+                  />
+                  <div>
+                    <p className="font-display text-xl font-black tracking-[-0.05em]">
+                      {investment.asset}
+                    </p>
+                    <p className="text-sm text-ink/52">
+                      {Number(investment.quantity).toLocaleString('en-US')} units
+                    </p>
                   </div>
-                  <p className="text-right text-sm font-black text-cream">
-                    {formatCurrency(Number(investment.averagePrice))}
-                  </p>
                 </div>
+                <p className="mt-5 text-sm font-black text-ink/52">Average price</p>
+                <p className="mt-1 font-display text-3xl font-black tracking-[-0.07em]">
+                  {formatCurrency(Number(investment.averagePrice))}
+                </p>
               </article>
             ))}
             {!isLoading && investments.length === 0 ? (
-              <p className="rounded-[1.5rem] border border-cream/10 bg-cream/8 p-4 text-sm text-cream/62">
+              <p className="rounded-[1.5rem] border border-ink/8 bg-white/58 p-4 text-sm text-ink/62">
                 No investments registered yet.
               </p>
             ) : null}
           </div>
         </Card>
       </section>
+    )
+  }
 
-      <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]" id="ai-desk">
+  function renderAiModule() {
+    return (
+      <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr] 2xl:gap-6" id="ai-desk">
         <Card tone="clay">
           <Badge tone="cream">AI desk</Badge>
-          <h3 className="mt-3 font-display text-3xl font-black leading-none tracking-[-0.08em]">
+          <h3 className="mt-3 font-display text-3xl font-black leading-none tracking-[-0.08em] 2xl:text-5xl">
             One entry point for agentic analysis.
           </h3>
-          <p className="mt-4 text-sm leading-6 text-cream/76">
+          <p className="mt-4 text-sm leading-6 text-cream/76 2xl:text-base 2xl:leading-7">
             This panel calls the Kotlin backend, which forwards the request to
             the Python orchestrator. The agent then uses MCP tools for real data.
           </p>
@@ -300,13 +618,13 @@ export function DashboardPage() {
 
         <Card>
           <Badge tone="clay">Agent response</Badge>
-          <div className="mt-5 rounded-[1.5rem] border border-ink/8 bg-white/58 p-4">
+          <div className="mt-5 rounded-[1.5rem] border border-ink/8 bg-white/58 p-4 2xl:p-6">
             {aiResponse ? (
               <>
                 <p className="text-sm font-black text-moss">
                   Routed to {aiResponse.routedTo} by {aiResponse.agent}
                 </p>
-                <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-ink/70">
+                <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-ink/70 2xl:text-base 2xl:leading-7">
                   {aiResponse.response}
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -339,6 +657,40 @@ export function DashboardPage() {
           </div>
         </Card>
       </section>
-    </>
+    )
+  }
+}
+
+type ModuleActionCardProps = {
+  description: string
+  label: string
+  onOpen: () => void
+  onPrimaryAction: () => void
+  primaryAction: string
+  title: string
+}
+
+function ModuleActionCard({
+  description,
+  label,
+  onOpen,
+  onPrimaryAction,
+  primaryAction,
+  title,
+}: ModuleActionCardProps) {
+  return (
+    <Card className="min-h-72">
+      <Badge tone="clay">{label}</Badge>
+      <h3 className="mt-4 font-display text-3xl font-black tracking-[-0.07em]">
+        {title}
+      </h3>
+      <p className="mt-3 text-sm leading-6 text-ink/62">{description}</p>
+      <div className="mt-6 grid gap-2 sm:grid-cols-2">
+        <Button onClick={onPrimaryAction}>{primaryAction}</Button>
+        <Button onClick={onOpen} variant="secondary">
+          Open module
+        </Button>
+      </div>
+    </Card>
   )
 }
