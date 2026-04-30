@@ -4,7 +4,7 @@
 
 This file tracks the real implementation state of the project.
 
-Step 1, Step 2, Step 3, Step 4, Step 5, Step 6, and Step 7 have been completed.
+Step 1, Step 2, Step 3, Step 4, Step 5, Step 6, Step 7, and Step 8 have been completed.
 
 Frontend is part of the project specification, but it has not been started yet.
 
@@ -17,6 +17,7 @@ Frontend is part of the project specification, but it has not been started yet.
 - Step 5 - MCP Server
 - Step 6 - Multi-Agent System
 - Step 7 - LLM Integration
+- Step 8 - Kotlin to Python Integration
 
 ## Current Step
 
@@ -24,7 +25,7 @@ Frontend is part of the project specification, but it has not been started yet.
 
 ## Next Steps
 
-- Step 8 - Kotlin to Python Integration
+- Step 9 - Spring AI Integration in Kotlin Backend
 
 ## Decisions Taken
 
@@ -56,12 +57,19 @@ Frontend is part of the project specification, but it has not been started yet.
 - MCP server database configuration is driven by environment variables with defaults aligned to the root `docker-compose.yml`
 - Step 5 validation uses an in-memory MCP client session to execute the mandatory tools locally against the real PostgreSQL database
 - MCP server Python code is organized as an installable `src/` layout package named `financial_hub_mcp`
-- The initial multi-agent system is deterministic and does not use an LLM yet, because LLM integration belongs to Step 7
+- The initial Step 6 multi-agent system was deterministic; Step 7 replaced final agent text generation with Groq-backed LLM responses
 - The agent system is organized as an installable `src/` layout package named `financial_hub_agents`
 - Specialized agents must access project data through MCP tools instead of direct database access
 - Groq is the first LLM provider implemented for the Python agents
 - Groq API keys must be supplied through `GROQ_API_KEY` in the environment or an ignored local `agents-python/.env` file
 - Groq model selection uses `meta-llama/llama-4-scout-17b-16e-instruct` as the default model, with `llama-3.3-70b-versatile` and `llama-3.1-8b-instant` as same-provider fallbacks
+- The Python agent system exposes an HTTP integration layer with FastAPI for Kotlin backend communication
+- The Python agents HTTP service exposes `GET /health` and `POST /analyze`
+- The Kotlin backend exposes `POST /ai/analyze` as the backend-facing AI analysis endpoint
+- Kotlin to Python integration uses `AGENTS_BASE_URL`, defaulting to `http://localhost:8000` locally and `http://agents:8000` in Docker Compose
+- The backend AI package follows the current MVC/service/client style: `controller`, `service`, `client`, `dto`, and `exception`
+- Step 8 deliberately does not use Spring AI; Spring AI remains Step 9
+- Docker Compose now declares `postgres`, `agents`, and `backend`; project services should continue to run through the root `docker-compose.yml`
 
 ## Problems Found
 
@@ -69,6 +77,8 @@ Frontend is part of the project specification, but it has not been started yet.
 - Docker Compose with JDK 21 was used to keep Step 1 executable and testable
 - Backend test execution inside the Maven container must use the Compose datasource host instead of `localhost`
 - The `pip` command is not directly available in the local PowerShell environment, so Python package installation should use `python -m pip`
+- Running backend Maven tests with `spring.jpa.hibernate.ddl-auto=create-drop` against the Compose PostgreSQL database can wipe current local data; reseed transactions/investments afterward if manual end-to-end validation needs real rows
+- `docker compose run backend ...` may start dependent services such as `agents` because of Compose dependencies
 
 ## Notes
 
@@ -90,3 +100,29 @@ Frontend is part of the project specification, but it has not been started yet.
 - Step 6 validation confirmed routing behavior and MCP-backed agent responses through `python tests/smoke_test.py`
 - Step 7 validation confirmed Groq-generated agent responses based on real MCP tool outputs through `python tests/live_groq_smoke_test.py`
 - A local ignored `agents-python/.env` file exists for `GROQ_API_KEY`; the current key was created on April 29, 2026 and should be renewed by July 28, 2026
+- FastAPI integration for agents now exists at `agents-python/src/financial_hub_agents/api.py`
+- Kotlin AI integration now exists in `backend-kotlin/src/main/kotlin/com/financialhub/backend/ai/`
+- Backend AI endpoint contract:
+  - request: `POST /ai/analyze` with JSON body `{"message": "..."}`
+  - response: `agent`, `routedTo`, `routingReason`, `response`, `toolsUsed`, and `data`
+- Python agents endpoint contract:
+  - request: `POST /analyze` with JSON body `{"message": "..."}`
+  - response uses camelCase aliases for Kotlin compatibility (`routedTo`, `routingReason`, `toolsUsed`)
+- Root `docker-compose.yml` now starts the Python agents service using `python:3.14-slim`, installs `agents-python/requirements.txt`, and runs `python -m financial_hub_agents.api`
+- Docker Compose agents service reads `agents-python/.env` through `env_file`; the real token remains ignored by Git
+- Compose runtime database configuration for MCP uses service host `postgres` through `MCP_DB_HOST=postgres`
+- Step 8 backend test validation passed with `docker compose run --rm -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/financial_hub backend ./mvnw test`
+- Step 8 Python validation passed with `python tests/smoke_test.py`, `python tests/live_groq_smoke_test.py`, `python -m compileall -q src tests`, and `python -m pip check` inside `agents-python/.venv`
+- Step 8 end-to-end validation passed through Docker Compose with `POST http://localhost:8080/ai/analyze`
+- Manual end-to-end validation seeded:
+  - transaction: `EXPENSE`, amount `125.75`, category `Groceries`, date `2026-04-29`
+  - investment: asset `VALE3`, quantity `900.0000`, averagePrice `84.32`
+- Confirmed full flow after Step 8:
+  - `POST /ai/analyze` on Kotlin backend
+  - Kotlin `AgentsClient` calls Python FastAPI `/analyze`
+  - Python `Orchestrator` routes to `FinancialAnalyst` or `InvestmentAdvisor`
+  - Specialized agent calls MCP tools (`get_transactions` or `get_investments`)
+  - MCP reads PostgreSQL
+  - Groq generates the final natural-language response from real tool output
+- Current recommended next step is Step 9 - Spring AI Integration in Kotlin Backend
+- For the next session, read `specs.md` and this `AGENTS.md` first; do not start frontend yet because Step 9 comes before frontend setup

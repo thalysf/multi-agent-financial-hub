@@ -9,14 +9,17 @@ description = "Initial multi-agent system for Financial Hub."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "fastapi==0.124.0",
     "groq==1.2.0",
     "mcp[cli]==1.18.0",
     "pydantic==2.12.3",
     "python-dotenv==1.2.2",
+    "uvicorn==0.38.0",
 ]
 
 [project.scripts]
 financial-hub-agents = "financial_hub_agents.cli:main"
+financial-hub-agents-api = "financial_hub_agents.api:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

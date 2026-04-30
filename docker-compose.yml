@@ -27,12 +27,38 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/financial_hub
       SPRING_DATASOURCE_USERNAME: financial_user
       SPRING_DATASOURCE_PASSWORD: financial_pass
+      AGENTS_BASE_URL: http://agents:8000
       SERVER_PORT: 8080
     ports:
       - "8080:8080"
     volumes:
       - ./:/workspace
       - ./docker/maven-cache:/root/.m2
+    depends_on:
+      postgres:
+        condition: service_healthy
+      agents:
+        condition: service_started
+
+  agents:
+    image: python:3.14-slim
+    container_name: financial-hub-agents
+    working_dir: /workspace/agents-python
+    command: sh -lc "python -m pip install -r requirements.txt && python -m financial_hub_agents.api"
+    env_file:
+      - ./agents-python/.env
+    environment:
+      MCP_DB_HOST: postgres
+      MCP_DB_PORT: 5432
+      MCP_DB_NAME: financial_hub
+      MCP_DB_USER: financial_user
+      MCP_DB_PASSWORD: financial_pass
+      MCP_DB_SSLMODE: disable
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/workspace
+      - ./docker/pip-cache:/root/.cache/pip
     depends_on:
       postgres:
         condition: service_healthy

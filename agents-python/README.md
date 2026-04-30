@@ -40,6 +40,20 @@ You can also run the installed console script:
 financial-hub-agents "show my investment summary"
 ```
 
+## HTTP API
+
+Step 8 exposes the orchestrator over HTTP for the Kotlin backend:
+
+```powershell
+cd agents-python
+python -m financial_hub_agents.api
+```
+
+Available endpoints:
+
+- `GET /health`
+- `POST /analyze` with body `{"message": "analyze my spending"}`
+
 ## Smoke test
 
 ```powershell

@@ -6,8 +6,11 @@ import com.financialhub.backend.investments.repository.InvestmentRepository
 import com.financialhub.backend.modules.FinancialModuleRegistry
 import com.financialhub.backend.transactions.TransactionModule
 import com.financialhub.backend.transactions.repository.TransactionRepository
+import com.sun.net.httpserver.HttpServer
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
@@ -21,12 +24,14 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.net.InetSocketAddress
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestPropertySource(
     properties = [
         "spring.jpa.hibernate.ddl-auto=create-drop",
+        "agents.base-url=http://localhost:18080",
     ],
 )
 class BackendKotlinApplicationTests {
@@ -50,6 +55,26 @@ class BackendKotlinApplicationTests {
 
     @Autowired
     private lateinit var investmentModule: InvestmentModule
+
+    @Test
+    fun `ai analyze forwards request to agents service`() {
+        val request =
+            mapOf(
+                "message" to "Analyze my expenses",
+            )
+
+        mockMvc
+            .perform(
+                post("/ai/analyze")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)),
+            ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.agent").value("Orchestrator"))
+            .andExpect(jsonPath("$.routedTo").value("FinancialAnalyst"))
+            .andExpect(jsonPath("$.routingReason").value("test route"))
+            .andExpect(jsonPath("$.response").value("test agent response"))
+            .andExpect(jsonPath("$.toolsUsed[0]").value("get_transactions"))
+    }
 
     @Test
     fun contextLoads() {
@@ -158,5 +183,41 @@ class BackendKotlinApplicationTests {
             .perform(get("/investments"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.length()").value(0))
+    }
+
+    companion object {
+        private lateinit var agentsServer: HttpServer
+
+        @JvmStatic
+        @BeforeAll
+        fun startAgentsServer() {
+            agentsServer = HttpServer.create(InetSocketAddress("localhost", 18080), 0)
+            agentsServer.createContext("/analyze") { exchange ->
+                val response =
+                    """
+                    {
+                      "agent": "Orchestrator",
+                      "routedTo": "FinancialAnalyst",
+                      "routingReason": "test route",
+                      "response": "test agent response",
+                      "toolsUsed": ["get_transactions"],
+                      "data": {"transactionCount": 1}
+                    }
+                    """.trimIndent()
+
+                exchange.responseHeaders.add("Content-Type", "application/json")
+                exchange.sendResponseHeaders(200, response.toByteArray().size.toLong())
+                exchange.responseBody.use { body ->
+                    body.write(response.toByteArray())
+                }
+            }
+            agentsServer.start()
+        }
+
+        @JvmStatic
+        @AfterAll
+        fun stopAgentsServer() {
+            agentsServer.stop(0)
+        }
     }
 }
