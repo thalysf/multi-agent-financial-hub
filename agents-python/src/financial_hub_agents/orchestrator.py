@@ -1,4 +1,5 @@
 from financial_hub_agents.agents import FinancialAnalyst, InvestmentAdvisor
+from financial_hub_agents.llm import LlmProvider
 from financial_hub_agents.models import OrchestratorResponse
 
 
@@ -39,9 +40,10 @@ class Orchestrator:
         self,
         financial_analyst: FinancialAnalyst | None = None,
         investment_advisor: InvestmentAdvisor | None = None,
+        llm_provider: LlmProvider | None = None,
     ) -> None:
-        self.financial_analyst = financial_analyst or FinancialAnalyst()
-        self.investment_advisor = investment_advisor or InvestmentAdvisor()
+        self.financial_analyst = financial_analyst or FinancialAnalyst(llm_provider=llm_provider)
+        self.investment_advisor = investment_advisor or InvestmentAdvisor(llm_provider=llm_provider)
 
     async def handle(self, message: str) -> OrchestratorResponse:
         routed_to, reason = self._route(message)

@@ -10,6 +10,22 @@ Initial multi-agent system for Step 6 of the project specification.
 
 The specialized agents use MCP tools from `financial_hub_mcp`; they do not read the database directly.
 
+## LLM configuration
+
+Step 7 uses Groq as the first LLM provider.
+
+Create a local `.env` file in `agents-python/` using `.env.example` as reference:
+
+```powershell
+GROQ_API_KEY=your-token-here
+GROQ_MODEL=meta-llama/llama-4-scout-17b-16e-instruct
+GROQ_FALLBACK_MODELS=llama-3.3-70b-versatile,llama-3.1-8b-instant
+```
+
+The real `.env` file is ignored by Git, so the token does not need to be committed.
+
+The default model is `meta-llama/llama-4-scout-17b-16e-instruct`, with automatic fallback to `llama-3.3-70b-versatile` and then `llama-3.1-8b-instant`.
+
 ## Run
 
 ```powershell
@@ -29,4 +45,11 @@ financial-hub-agents "show my investment summary"
 ```powershell
 cd agents-python
 python tests/smoke_test.py
+```
+
+For a live Groq validation:
+
+```powershell
+cd agents-python
+python tests/live_groq_smoke_test.py
 ```

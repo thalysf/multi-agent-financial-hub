@@ -2,10 +2,11 @@ import asyncio
 import json
 
 from financial_hub_agents.orchestrator import Orchestrator
+from financial_hub_agents.llm import StaticLlmProvider
 
 
 async def run_smoke_test() -> None:
-    orchestrator = Orchestrator()
+    orchestrator = Orchestrator(llm_provider=StaticLlmProvider())
 
     spending_result = await orchestrator.handle("Analyze my expenses and spending by category")
     investment_result = await orchestrator.handle("Analyze my investment portfolio")
@@ -21,6 +22,12 @@ async def run_smoke_test() -> None:
 
     if "get_investments" not in investment_result.tools_used:
         raise RuntimeError("InvestmentAdvisor did not use the get_investments MCP tool.")
+
+    if "Static LLM response" not in spending_result.response:
+        raise RuntimeError("FinancialAnalyst did not generate its response through the LLM provider.")
+
+    if "Static LLM response" not in investment_result.response:
+        raise RuntimeError("InvestmentAdvisor did not generate its response through the LLM provider.")
 
     report = {
         "spending": spending_result.model_dump(),

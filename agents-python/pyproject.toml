@@ -9,8 +9,10 @@ description = "Initial multi-agent system for Financial Hub."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "groq==1.2.0",
     "mcp[cli]==1.18.0",
     "pydantic==2.12.3",
+    "python-dotenv==1.2.2",
 ]
 
 [project.scripts]
