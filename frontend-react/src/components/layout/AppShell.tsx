@@ -1,4 +1,5 @@
 import { useEffect, useRef, type PointerEvent, type ReactNode } from 'react'
+import { LayoutGroup, motion } from 'motion/react'
 import type { ModuleId } from '../../lib/modules'
 import { aboutModule, modules } from '../../lib/modules'
 import type { ThemeMode } from '../../lib/theme'
@@ -67,6 +68,13 @@ export function AppShell({
     }
   }, [activeModule])
 
+  const menuTransition = {
+    type: 'spring' as const,
+    stiffness: 120,
+    damping: 24,
+    mass: 0.9,
+  }
+
   return (
     <main
       className="app-shell relative min-h-screen overflow-hidden bg-sand text-ink"
@@ -117,36 +125,58 @@ export function AppShell({
               </Badge>
             </div>
 
-            <nav className="mt-6 flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible">
-              {modules.map((item) => (
-                <button
-                  className={`nav-pill interactive-surface group whitespace-nowrap rounded-full px-4 py-3 text-left text-sm font-bold ${
-                    activeModule === item.id
-                      ? 'nav-pill-active bg-cream text-ink'
-                      : 'bg-cream/5 text-cream/72'
-                  }`}
-                  key={item.id}
-                  onClick={() => onNavigate(item.id)}
-                  type="button"
-                >
-                  <span className="block">{item.label}</span>
-                  <span className="mt-0.5 hidden text-xs font-semibold opacity-50 xl:block">
-                    {item.helper}
-                  </span>
-                </button>
-              ))}
-            </nav>
+            <LayoutGroup id="financial-hub-sidebar">
+              <nav className="mt-6 flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible">
+                {modules.map((item) => {
+                  const isActive = activeModule === item.id
 
-            <button
-              className={`nav-card interactive-surface mt-6 hidden w-full rounded-[1.5rem] border border-cream/10 p-4 text-left lg:block ${
-                activeModule === aboutModule.id ? 'nav-card-active bg-cream/14' : 'bg-cream/6'
-              }`}
-              onClick={() => onNavigate(aboutModule.id)}
-              type="button"
-            >
-              <p className="text-sm font-semibold text-cream">{aboutModule.label}</p>
-              <p className="mt-2 text-sm leading-6 text-cream/52">{aboutModule.helper}</p>
-            </button>
+                  return (
+                    <motion.button
+                      className={`nav-pill interactive-surface group whitespace-nowrap rounded-full px-4 py-3 text-left text-sm font-bold ${
+                        isActive ? 'nav-pill-active bg-cream text-ink' : 'bg-cream/5 text-cream/72'
+                      }`}
+                      key={item.id}
+                      layout
+                      onClick={() => onNavigate(item.id)}
+                      transition={menuTransition}
+                      type="button"
+                    >
+                      {isActive ? (
+                        <motion.span
+                          className="nav-active-pill"
+                          layoutId="active-menu-pill"
+                          transition={menuTransition}
+                        />
+                      ) : null}
+                      <span className="block">{item.label}</span>
+                      <span className="mt-0.5 hidden text-xs font-semibold opacity-50 xl:block">
+                        {item.helper}
+                      </span>
+                    </motion.button>
+                  )
+                })}
+              </nav>
+
+              <motion.button
+                className={`nav-card interactive-surface mt-6 hidden w-full rounded-[1.5rem] border border-cream/10 p-4 text-left lg:block ${
+                  activeModule === aboutModule.id ? 'nav-card-active bg-cream/14' : 'bg-cream/6'
+                }`}
+                layout
+                onClick={() => onNavigate(aboutModule.id)}
+                transition={menuTransition}
+                type="button"
+              >
+                {activeModule === aboutModule.id ? (
+                  <motion.span
+                    className="nav-active-pill"
+                    layoutId="active-menu-pill"
+                    transition={menuTransition}
+                  />
+                ) : null}
+                <p className="text-sm font-semibold text-cream">{aboutModule.label}</p>
+                <p className="mt-2 text-sm leading-6 text-cream/52">{aboutModule.helper}</p>
+              </motion.button>
+            </LayoutGroup>
           </div>
         </aside>
 

@@ -14,7 +14,7 @@ type TableProps<T> = {
 export function Table<T>({ columns, rows }: TableProps<T>) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[560px] border-separate border-spacing-y-2 text-left">
+      <table className="w-full min-w-[720px] border-separate border-spacing-y-2 text-left">
         <thead>
           <tr>
             {columns.map((column) => (

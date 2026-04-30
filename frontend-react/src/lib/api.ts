@@ -26,6 +26,10 @@ export type CreateInvestmentInput = {
   averagePrice: string
 }
 
+export type UpdateTransactionInput = CreateTransactionInput
+
+export type UpdateInvestmentInput = CreateInvestmentInput
+
 export type AiAnalyzeResponse = {
   agent: string
   routedTo: string
@@ -50,7 +54,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(`Request failed with status ${response.status}`)
   }
 
-  return response.json() as Promise<T>
+  if (response.status === 204) {
+    return undefined as T
+  }
+
+  const responseText = await response.text()
+  return (responseText ? JSON.parse(responseText) : undefined) as T
 }
 
 export function getTransactions() {
@@ -64,6 +73,19 @@ export function createTransaction(input: CreateTransactionInput) {
   })
 }
 
+export function updateTransaction(id: number, input: UpdateTransactionInput) {
+  return request<Transaction>(`/transactions/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(input),
+  })
+}
+
+export function deleteTransaction(id: number) {
+  return request<void>(`/transactions/${id}`, {
+    method: 'DELETE',
+  })
+}
+
 export function getInvestments() {
   return request<Investment[]>('/investments')
 }
@@ -72,6 +94,19 @@ export function createInvestment(input: CreateInvestmentInput) {
   return request<Investment>('/investments', {
     method: 'POST',
     body: JSON.stringify(input),
+  })
+}
+
+export function updateInvestment(id: number, input: UpdateInvestmentInput) {
+  return request<Investment>(`/investments/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(input),
+  })
+}
+
+export function deleteInvestment(id: number) {
+  return request<void>(`/investments/${id}`, {
+    method: 'DELETE',
   })
 }
 

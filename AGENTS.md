@@ -121,6 +121,19 @@ All currently defined specification steps have been completed.
 - `AppShell` updates pointer CSS variables on movement to support a subtle ambient hover glow without React state churn
 - `AppShell` also uses `ResizeObserver` on the content column to synchronize the sidebar rail height exactly with the rendered content height, without using viewport height as a floor
 - Hover contrast policy is now stronger by theme: light mode uses ink/black emphasis, while dark mode uses a vivid green accent glow
+- Frontend module navigation now uses Motion for React for polished component-level route transitions and shared sidebar active-state layout animation
+- Motion for React was chosen over the native View Transition API because the dashboard needs React-aware enter/exit sequencing plus precise shared-layout animation for the sidebar indicator
+- Large dashboard card hover effects should stay restrained to avoid visual collision between adjacent cards on dense layouts
+- Frontend modals use Motion for React enter/exit animation instead of instant mount/unmount
+- Overview vertical rhythm uses slightly larger vertical gaps than horizontal gaps to keep stacked cards from feeling glued together
+- Dark-mode input placeholders should stay readable against darkened modal/input surfaces
+- Frontend transactions and investments now expose full CRUD actions by calling the existing Kotlin `PUT` and `DELETE` endpoints
+- Frontend delete actions use a confirmation modal instead of browser `confirm`
+- Deleting an investment also removes its persisted frontend color from `localStorage`
+- The frontend API client handles `204 No Content` responses for delete endpoints
+- Frontend row/card CRUD action buttons use accessible icon-only buttons instead of visible Edit/Delete text
+- Frontend row/card CRUD action buttons use the local `ActionIconButton` pattern with explicit SVG sizing/stroke to avoid invisible icons from utility-class conflicts
+- The Transactions Quick Insight card should behave as a full lateral panel on wide layouts, not as a small summary tile
 
 ## Problems Found
 
@@ -250,6 +263,38 @@ All currently defined specification steps have been completed.
 - Post-spec transactions sidebar exact-height refinement validation passed with `npm run build`
 - Post-spec transactions sidebar exact-height refinement validation passed with `npm run lint`
 - Post-spec transactions sidebar exact-height runtime validation passed after `docker compose up -d --force-recreate frontend`; `GET http://localhost:5173/#transactions` returned HTTP 200 and served source no longer includes sidebar viewport min-height classes
+- Post-spec transition research compared Motion for React `AnimatePresence`/layout animations with the native View Transition API for a sidebar-plus-cards dashboard
+- Post-spec Motion transition refinement added the `motion` frontend dependency
+- Post-spec Motion transition refinement uses `AnimatePresence` with `mode="wait"` and a keyed module wrapper for slower, more deliberate screen transitions
+- Post-spec Motion transition refinement uses `LayoutGroup`, `layout`, and a shared `layoutId` active pill for sidebar menu movement
+- Post-spec Motion transition validation passed with `npm run build`
+- Post-spec Motion transition validation passed with `npm run lint`
+- Post-spec Motion transition runtime validation passed after `docker compose up -d --force-recreate frontend`; `GET http://localhost:5173/#overview` returned HTTP 200 and served source includes Motion primitives
+- Post-spec final hover polish reduced large card hover movement/shadow intensity to avoid cards visually colliding
+- Post-spec final hover polish fixed light-mode About sidebar hover contrast so the text remains readable on the bright hover state
+- Post-spec final modal polish added Motion-powered animated entry/exit for transaction and investment modals
+- Post-spec final hover/modal polish validation passed with `npm run build`
+- Post-spec final hover/modal polish validation passed with `npm run lint`
+- Post-spec overview rhythm refinement increased only vertical spacing between Overview cards while preserving the existing horizontal spacing
+- Post-spec dark modal input refinement improved placeholder contrast for transaction and investment form examples
+- Post-spec overview/input refinement validation passed with `npm run build`
+- Post-spec overview/input refinement validation passed with `npm run lint`
+- Post-spec CRUD frontend expansion added `PUT`/`DELETE` helpers for transactions and investments in `frontend-react/src/lib/api.ts`
+- Post-spec CRUD frontend expansion changed transaction and investment modals to support both create and edit modes
+- Post-spec CRUD frontend expansion added edit/delete actions to the Transactions table and Investment cards
+- Post-spec CRUD frontend expansion added a Motion-backed delete confirmation modal using the existing modal primitive
+- Post-spec CRUD frontend expansion validation passed with `npm run build`
+- Post-spec CRUD frontend expansion validation passed with `npm run lint`
+- Post-spec CRUD frontend expansion runtime validation created, updated, and deleted temporary transaction/investment records through the live backend
+- Post-spec CRUD frontend expansion runtime cleanup confirmed no temporary transaction/investment validation records remained
+- Post-spec CRUD frontend expansion runtime validation passed after `docker compose up -d --force-recreate frontend`; `GET http://localhost:5173/#transactions` returned HTTP 200
+- Post-spec CRUD action polish replaced visible Edit/Delete labels with inline pencil/trash SVG icons plus `aria-label` and `title`
+- Post-spec CRUD action icon visibility refinement replaced generic `Button` usage with a dedicated `ActionIconButton` and explicit `.action-icon` CSS sizing/color
+- Post-spec Transactions Quick Insight refinement expanded the right-side panel layout, moved it to the lateral column from `xl` upward, and added income/expense detail rows
+- Post-spec CRUD action/Quick Insight refinement validation passed with `npm run build`
+- Post-spec CRUD action/Quick Insight refinement validation passed with `npm run lint`
+- Post-spec CRUD action icon visibility refinement validation passed with `npm run build`
+- Post-spec CRUD action icon visibility refinement validation passed with `npm run lint`
 - Manual end-to-end validation seeded:
   - transaction: `EXPENSE`, amount `125.75`, category `Groceries`, date `2026-04-29`
   - investment: asset `VALE3`, quantity `900.0000`, averagePrice `84.32`

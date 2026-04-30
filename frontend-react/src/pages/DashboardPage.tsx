@@ -1,10 +1,12 @@
 import {
   type FormEvent,
+  type ReactNode,
   startTransition,
   useDeferredValue,
   useEffect,
   useState,
 } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
 import { aiSuggestions } from '../data/dashboard'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
@@ -21,13 +23,18 @@ import {
   analyzeFinances,
   createInvestment,
   createTransaction,
+  deleteInvestment,
+  deleteTransaction,
   getInvestments,
   getTransactions,
+  updateInvestment,
+  updateTransaction,
 } from '../lib/api'
 import { formatCompactCurrency, formatCurrency, formatDate } from '../lib/format'
 import {
   ensureInvestmentColors,
   getStoredInvestmentColors,
+  saveInvestmentColors,
 } from '../lib/investmentColors'
 import type { ModuleId } from '../lib/modules'
 
@@ -38,8 +45,48 @@ type DashboardPageProps = {
 
 type SummaryTone = 'cream' | 'ink' | 'lagoon' | 'clay'
 type ModalType = 'transaction' | 'investment' | null
+type DeleteTarget =
+  | { item: Transaction; kind: 'transaction' }
+  | { item: Investment; kind: 'investment' }
 
 const today = new Date().toISOString().slice(0, 10)
+const motionEaseOut = [0.16, 1, 0.3, 1] as const
+const motionEaseIn = [0.7, 0, 0.84, 0] as const
+const moduleMotionTransition = {
+  duration: 0.92,
+  ease: motionEaseOut,
+} as const
+const moduleMotionVariants = {
+  initial: {
+    clipPath: 'inset(0 3.5rem 2.5rem 0 round 2rem)',
+    filter: 'blur(14px) saturate(0.92)',
+    opacity: 0,
+    scale: 0.975,
+    y: 34,
+  },
+  animate: {
+    clipPath: 'inset(0 0 0 0 round 0rem)',
+    filter: 'blur(0px) saturate(1)',
+    opacity: 1,
+    scale: 1,
+    transition: {
+      ...moduleMotionTransition,
+      opacity: { duration: 0.62, ease: motionEaseOut },
+    },
+    y: 0,
+  },
+  exit: {
+    clipPath: 'inset(1rem 0 0 2rem round 2rem)',
+    filter: 'blur(8px) saturate(0.96)',
+    opacity: 0,
+    scale: 0.985,
+    transition: {
+      duration: 0.42,
+      ease: motionEaseIn,
+    },
+    y: -18,
+  },
+}
 
 async function loadDashboardData() {
   const [transactionsResult, investmentsResult] = await Promise.all([
@@ -48,6 +95,40 @@ async function loadDashboardData() {
   ])
 
   return { investmentsResult, transactionsResult }
+}
+
+function createEmptyTransactionForm(): CreateTransactionInput {
+  return {
+    amount: '',
+    category: '',
+    date: today,
+    type: 'EXPENSE',
+  }
+}
+
+function createEmptyInvestmentForm(): CreateInvestmentInput {
+  return {
+    asset: '',
+    averagePrice: '',
+    quantity: '',
+  }
+}
+
+function transactionToForm(transaction: Transaction): CreateTransactionInput {
+  return {
+    amount: String(transaction.amount),
+    category: transaction.category,
+    date: transaction.date,
+    type: transaction.type,
+  }
+}
+
+function investmentToForm(investment: Investment): CreateInvestmentInput {
+  return {
+    asset: investment.asset,
+    averagePrice: String(investment.averagePrice),
+    quantity: String(investment.quantity),
+  }
 }
 
 export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) {
@@ -62,19 +143,18 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
   const [aiError, setAiError] = useState<string | null>(null)
   const [isAiLoading, setIsAiLoading] = useState(false)
   const [activeModal, setActiveModal] = useState<ModalType>(null)
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
+  const [editingInvestment, setEditingInvestment] = useState<Investment | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
-  const [transactionForm, setTransactionForm] = useState<CreateTransactionInput>({
-    amount: '',
-    category: '',
-    date: today,
-    type: 'EXPENSE',
-  })
-  const [investmentForm, setInvestmentForm] = useState<CreateInvestmentInput>({
-    asset: '',
-    averagePrice: '',
-    quantity: '',
-  })
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [transactionForm, setTransactionForm] = useState<CreateTransactionInput>(
+    createEmptyTransactionForm,
+  )
+  const [investmentForm, setInvestmentForm] = useState<CreateInvestmentInput>(
+    createEmptyInvestmentForm,
+  )
 
   const deferredFilter = useDeferredValue(transactionFilter)
   const normalizedFilter = deferredFilter.trim().toLowerCase()
@@ -100,6 +180,15 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
     .filter((transaction) => transaction.type === 'EXPENSE')
     .sort((first, second) => Number(second.amount) - Number(first.amount))[0]
   const recentInvestments = investments.slice(0, 6)
+  const transactionModalIsEditing = editingTransaction !== null
+  const investmentModalIsEditing = editingInvestment !== null
+  const deleteModalTitle = deleteTarget
+    ? `Delete ${deleteTarget.kind === 'transaction' ? 'transaction' : 'investment'}?`
+    : 'Delete record?'
+  const deleteModalDescription =
+    deleteTarget?.kind === 'transaction'
+      ? 'This permanently removes the cash movement from the dashboard.'
+      : 'This permanently removes the portfolio position from the dashboard.'
 
   const summaryCards: Array<{
     detail: string
@@ -182,15 +271,25 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
     event.preventDefault()
     setIsSaving(true)
     setFormError(null)
+    const transactionBeingEdited = editingTransaction
 
     try {
-      const created = await createTransaction(transactionForm)
-      setTransactions((current) => [created, ...current])
-      setTransactionForm({ amount: '', category: '', date: today, type: 'EXPENSE' })
+      if (transactionBeingEdited) {
+        const updated = await updateTransaction(transactionBeingEdited.id, transactionForm)
+        setTransactions((current) =>
+          current.map((transaction) => (transaction.id === updated.id ? updated : transaction)),
+        )
+      } else {
+        const created = await createTransaction(transactionForm)
+        setTransactions((current) => [created, ...current])
+      }
+
+      setEditingTransaction(null)
+      setTransactionForm(createEmptyTransactionForm())
       setActiveModal(null)
       onNavigate('transactions')
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : 'Could not create transaction')
+      setFormError(error instanceof Error ? error.message : 'Could not save transaction')
     } finally {
       setIsSaving(false)
     }
@@ -200,16 +299,26 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
     event.preventDefault()
     setIsSaving(true)
     setFormError(null)
+    const investmentBeingEdited = editingInvestment
 
     try {
-      const created = await createInvestment(investmentForm)
-      setInvestments((current) => [created, ...current])
-      setInvestmentColors((current) => ensureInvestmentColors([created], current))
-      setInvestmentForm({ asset: '', averagePrice: '', quantity: '' })
+      if (investmentBeingEdited) {
+        const updated = await updateInvestment(investmentBeingEdited.id, investmentForm)
+        setInvestments((current) =>
+          current.map((investment) => (investment.id === updated.id ? updated : investment)),
+        )
+      } else {
+        const created = await createInvestment(investmentForm)
+        setInvestments((current) => [created, ...current])
+        setInvestmentColors((current) => ensureInvestmentColors([created], current))
+      }
+
+      setEditingInvestment(null)
+      setInvestmentForm(createEmptyInvestmentForm())
       setActiveModal(null)
       onNavigate('investments')
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : 'Could not create investment')
+      setFormError(error instanceof Error ? error.message : 'Could not save investment')
     } finally {
       setIsSaving(false)
     }
@@ -241,7 +350,103 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
 
   function openModal(type: Exclude<ModalType, null>) {
     setFormError(null)
+    if (type === 'transaction') {
+      setEditingTransaction(null)
+      setTransactionForm(createEmptyTransactionForm())
+    } else {
+      setEditingInvestment(null)
+      setInvestmentForm(createEmptyInvestmentForm())
+    }
     setActiveModal(type)
+  }
+
+  function closeEditorModal() {
+    if (isSaving) {
+      return
+    }
+
+    setActiveModal(null)
+    setEditingTransaction(null)
+    setEditingInvestment(null)
+    setFormError(null)
+  }
+
+  function openTransactionEditor(transaction: Transaction) {
+    setFormError(null)
+    setEditingInvestment(null)
+    setEditingTransaction(transaction)
+    setTransactionForm(transactionToForm(transaction))
+    setActiveModal('transaction')
+  }
+
+  function openInvestmentEditor(investment: Investment) {
+    setFormError(null)
+    setEditingTransaction(null)
+    setEditingInvestment(investment)
+    setInvestmentForm(investmentToForm(investment))
+    setActiveModal('investment')
+  }
+
+  function requestDeleteTransaction(transaction: Transaction) {
+    setFormError(null)
+    setDeleteTarget({ item: transaction, kind: 'transaction' })
+  }
+
+  function requestDeleteInvestment(investment: Investment) {
+    setFormError(null)
+    setDeleteTarget({ item: investment, kind: 'investment' })
+  }
+
+  function closeDeleteModal() {
+    if (isDeleting) {
+      return
+    }
+
+    setDeleteTarget(null)
+    setFormError(null)
+  }
+
+  async function handleConfirmDelete() {
+    if (!deleteTarget) {
+      return
+    }
+
+    const target = deleteTarget
+    setIsDeleting(true)
+    setFormError(null)
+
+    try {
+      if (target.kind === 'transaction') {
+        await deleteTransaction(target.item.id)
+        setTransactions((current) =>
+          current.filter((transaction) => transaction.id !== target.item.id),
+        )
+        if (editingTransaction?.id === target.item.id) {
+          closeEditorModal()
+        }
+      } else {
+        await deleteInvestment(target.item.id)
+        setInvestments((current) =>
+          current.filter((investment) => investment.id !== target.item.id),
+        )
+        setInvestmentColors((current) => {
+          const nextColors = { ...current }
+          delete nextColors[String(target.item.id)]
+          saveInvestmentColors(nextColors)
+          return nextColors
+        })
+
+        if (editingInvestment?.id === target.item.id) {
+          closeEditorModal()
+        }
+      }
+
+      setDeleteTarget(null)
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'Could not delete record')
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   return (
@@ -278,17 +483,34 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
         </Card>
       ) : null}
 
-      {activeModule === 'overview' ? renderOverviewModule() : null}
-      {activeModule === 'transactions' ? renderTransactionsModule() : null}
-      {activeModule === 'investments' ? renderInvestmentsModule() : null}
-      {activeModule === 'ai-desk' ? renderAiModule() : null}
-      {activeModule === 'about' ? renderAboutModule() : null}
+      <div className="module-transition-shell">
+        <AnimatePresence initial={false} mode="wait">
+          <motion.div
+            animate="animate"
+            className="module-transition"
+            exit="exit"
+            initial="initial"
+            key={activeModule}
+            variants={moduleMotionVariants}
+          >
+            {activeModule === 'overview' ? renderOverviewModule() : null}
+            {activeModule === 'transactions' ? renderTransactionsModule() : null}
+            {activeModule === 'investments' ? renderInvestmentsModule() : null}
+            {activeModule === 'ai-desk' ? renderAiModule() : null}
+            {activeModule === 'about' ? renderAboutModule() : null}
+          </motion.div>
+        </AnimatePresence>
+      </div>
 
       <Modal
-        description="Create a cash movement and keep the dashboard in sync."
+        description={
+          transactionModalIsEditing
+            ? 'Adjust this cash movement and keep every summary in sync.'
+            : 'Create a cash movement and keep the dashboard in sync.'
+        }
         isOpen={activeModal === 'transaction'}
-        onClose={() => setActiveModal(null)}
-        title="New transaction"
+        onClose={closeEditorModal}
+        title={transactionModalIsEditing ? 'Edit transaction' : 'New transaction'}
       >
         <form className="grid gap-3" onSubmit={handleTransactionSubmit}>
           <label className="grid gap-2 text-sm font-black text-ink/70">
@@ -347,16 +569,24 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
           </div>
           {formError ? <p className="text-sm font-bold text-clay">{formError}</p> : null}
           <Button disabled={isSaving} type="submit">
-            {isSaving ? 'Saving...' : 'Create transaction'}
+            {isSaving
+              ? 'Saving...'
+              : transactionModalIsEditing
+                ? 'Save transaction'
+                : 'Create transaction'}
           </Button>
         </form>
       </Modal>
 
       <Modal
-        description="Create a portfolio position and update the investment snapshot."
+        description={
+          investmentModalIsEditing
+            ? 'Adjust this portfolio position without changing its visual identity.'
+            : 'Create a portfolio position and update the investment snapshot.'
+        }
         isOpen={activeModal === 'investment'}
-        onClose={() => setActiveModal(null)}
-        title="New investment"
+        onClose={closeEditorModal}
+        title={investmentModalIsEditing ? 'Edit investment' : 'New investment'}
       >
         <form className="grid gap-3" onSubmit={handleInvestmentSubmit}>
           <label className="grid gap-2 text-sm font-black text-ink/70">
@@ -408,9 +638,44 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
           </div>
           {formError ? <p className="text-sm font-bold text-clay">{formError}</p> : null}
           <Button disabled={isSaving} type="submit">
-            {isSaving ? 'Saving...' : 'Create investment'}
+            {isSaving
+              ? 'Saving...'
+              : investmentModalIsEditing
+                ? 'Save investment'
+                : 'Create investment'}
           </Button>
         </form>
+      </Modal>
+
+      <Modal
+        description={deleteModalDescription}
+        isOpen={deleteTarget !== null}
+        onClose={closeDeleteModal}
+        title={deleteModalTitle}
+      >
+        {deleteTarget ? (
+          <div className="grid gap-4">
+            <div className="rounded-[1.5rem] border border-clay/20 bg-clay/10 p-4">
+              <p className="text-sm font-black uppercase tracking-[0.18em] text-clay">
+                Permanent action
+              </p>
+              <p className="mt-3 text-sm leading-6 text-ink/68">
+                {deleteTarget.kind === 'transaction'
+                  ? `${deleteTarget.item.category} - ${formatCurrency(Number(deleteTarget.item.amount))}`
+                  : `${deleteTarget.item.asset} - ${Number(deleteTarget.item.quantity).toLocaleString('en-US')} units`}
+              </p>
+            </div>
+            {formError ? <p className="text-sm font-bold text-clay">{formError}</p> : null}
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Button disabled={isDeleting} onClick={closeDeleteModal} variant="secondary">
+                Keep record
+              </Button>
+              <Button disabled={isDeleting} onClick={handleConfirmDelete} variant="danger">
+                {isDeleting ? 'Deleting...' : 'Delete permanently'}
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </Modal>
     </>
   )
@@ -418,7 +683,7 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
   function renderOverviewModule() {
     return (
       <>
-        <section className="grid auto-rows-fr items-stretch gap-4 md:grid-cols-3 2xl:gap-6">
+        <section className="grid auto-rows-fr items-stretch gap-x-4 gap-y-5 md:grid-cols-3 2xl:gap-x-6 2xl:gap-y-6">
           {summaryCards.map((card) => (
             <Card className="min-h-44 justify-between 2xl:min-h-48" key={card.label} tone={card.tone}>
               <p className="text-sm font-bold opacity-75">{card.label}</p>
@@ -432,7 +697,7 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
           ))}
         </section>
 
-        <section className="grid auto-rows-fr items-stretch gap-4 xl:grid-cols-3 2xl:gap-6">
+        <section className="mt-5 grid auto-rows-fr items-stretch gap-x-4 gap-y-5 xl:grid-cols-3 2xl:mt-6 2xl:gap-x-6 2xl:gap-y-6">
           <Card className="min-h-[34rem]">
             <div className="flex min-h-24 items-start justify-between gap-4">
               <div>
@@ -545,7 +810,7 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
 
   function renderTransactionsModule() {
     return (
-      <section className="grid gap-4 2xl:grid-cols-[1.35fr_0.65fr] 2xl:gap-6">
+      <section className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.65fr)] 2xl:grid-cols-[minmax(0,1.3fr)_minmax(28rem,0.7fr)] 2xl:gap-6">
         <Card id="transactions">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -594,6 +859,30 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
                   key: 'amount',
                   render: (row) => formatCurrency(Number(row.amount)),
                 },
+                {
+                  header: 'Actions',
+                  key: 'actions',
+                  render: (row) => (
+                    <div className="flex flex-wrap gap-2">
+                      <ActionIconButton
+                        aria-label={`Edit transaction ${row.category}`}
+                        onClick={() => openTransactionEditor(row)}
+                        title="Edit transaction"
+                        tone="edit"
+                      >
+                        <PencilIcon />
+                      </ActionIconButton>
+                      <ActionIconButton
+                        aria-label={`Delete transaction ${row.category}`}
+                        onClick={() => requestDeleteTransaction(row)}
+                        title="Delete transaction"
+                        tone="delete"
+                      >
+                        <TrashIcon />
+                      </ActionIconButton>
+                    </div>
+                  ),
+                },
               ]}
               rows={filteredTransactions}
             />
@@ -605,16 +894,35 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
           </div>
         </Card>
 
-        <Card tone="clay">
-          <Badge tone="cream">Quick insight</Badge>
-          <p className="mt-5 font-display text-4xl font-black tracking-[-0.08em]">
-            {formatCurrency(incomeTotal - expenseTotal)}
-          </p>
-          <p className="mt-3 text-sm leading-6 text-cream/76">
-            Net cash flow from the current records.
-          </p>
+        <Card className="min-h-[24rem] justify-between xl:min-h-full" tone="clay">
+          <div>
+            <Badge tone="cream">Quick insight</Badge>
+            <p className="mt-5 text-sm font-black uppercase tracking-[0.18em] text-cream/62">
+              Net cash flow
+            </p>
+            <p className="mt-3 font-display text-5xl font-black tracking-[-0.09em] 2xl:text-6xl">
+              {formatCurrency(incomeTotal - expenseTotal)}
+            </p>
+            <p className="mt-4 text-sm leading-7 text-cream/76">
+              Income minus expenses from the current transaction records.
+            </p>
+          </div>
+          <div className="mt-8 grid gap-3 rounded-[1.5rem] border border-white/14 bg-white/12 p-4">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-sm font-bold text-cream/64">Income</span>
+              <span className="font-display text-2xl font-black tracking-[-0.06em]">
+                {formatCurrency(incomeTotal)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-sm font-bold text-cream/64">Expenses</span>
+              <span className="font-display text-2xl font-black tracking-[-0.06em]">
+                {formatCurrency(expenseTotal)}
+              </span>
+            </div>
+          </div>
           <Button
-            className="mt-6"
+            className="mt-6 w-full"
             onClick={() => askWithPrompt('What should I notice about my cash flow?')}
             variant="ghost"
           >
@@ -677,6 +985,24 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
                 <p className="mt-1 font-display text-3xl font-black tracking-[-0.07em]">
                   {formatCurrency(Number(investment.averagePrice))}
                 </p>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  <ActionIconButton
+                    aria-label={`Edit investment ${investment.asset}`}
+                    onClick={() => openInvestmentEditor(investment)}
+                    title="Edit investment"
+                    tone="edit"
+                  >
+                    <PencilIcon />
+                  </ActionIconButton>
+                  <ActionIconButton
+                    aria-label={`Delete investment ${investment.asset}`}
+                    onClick={() => requestDeleteInvestment(investment)}
+                    title="Delete investment"
+                    tone="delete"
+                  >
+                    <TrashIcon />
+                  </ActionIconButton>
+                </div>
               </article>
             ))}
             {!isLoading && investments.length === 0 ? (
@@ -807,6 +1133,14 @@ type AboutMacroFlowProps = {
   macroFlow: FlowNodeProps[]
 }
 
+type ActionIconButtonProps = {
+  'aria-label': string
+  children: ReactNode
+  onClick: () => void
+  title: string
+  tone: 'delete' | 'edit'
+}
+
 function AboutMacroFlow({ macroFlow }: AboutMacroFlowProps) {
   return (
     <section className="grid gap-4 xl:grid-cols-[0.72fr_1.28fr] 2xl:gap-6">
@@ -865,6 +1199,28 @@ function AboutMacroFlow({ macroFlow }: AboutMacroFlowProps) {
   )
 }
 
+function ActionIconButton({
+  'aria-label': ariaLabel,
+  children,
+  onClick,
+  title,
+  tone,
+}: ActionIconButtonProps) {
+  return (
+    <button
+      aria-label={ariaLabel}
+      className={`action-icon-button interactive-surface ${
+        tone === 'edit' ? 'action-icon-button-edit' : 'action-icon-button-delete'
+      }`}
+      onClick={onClick}
+      title={title}
+      type="button"
+    >
+      {children}
+    </button>
+  )
+}
+
 function FlowNode({ chip, description, label }: FlowNodeProps) {
   return (
     <article className="interactive-surface group relative min-h-36 rounded-[1.25rem] border border-ink/8 bg-white/62 p-4 shadow-lg shadow-moss/5 hover:bg-white/78">
@@ -886,5 +1242,48 @@ function FlowConnection({ label }: { label: string }) {
     <div className="interactive-surface rounded-2xl border border-ink/8 bg-white/50 px-4 py-3 text-sm font-black text-ink/64">
       {label}
     </div>
+  )
+}
+
+function PencilIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="action-icon"
+      fill="none"
+      height="19"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2.4"
+      viewBox="0 0 24 24"
+      width="19"
+    >
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" />
+    </svg>
+  )
+}
+
+function TrashIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="action-icon"
+      fill="none"
+      height="19"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2.4"
+      viewBox="0 0 24 24"
+      width="19"
+    >
+      <path d="M3 6h18" />
+      <path d="M8 6V4h8v2" />
+      <path d="M19 6l-1 14H6L5 6" />
+      <path d="M10 11v5" />
+      <path d="M14 11v5" />
+    </svg>
   )
 }
