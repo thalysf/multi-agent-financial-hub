@@ -113,6 +113,14 @@ All currently defined specification steps have been completed.
 - Investment visual colors are assigned in the frontend and persisted in `localStorage` by investment id
 - Investment colors must be vibrant HSL colors, avoiding gray/white/low-saturation tones
 - Overview cards should use equal-height grid behavior so stacked/wrapped cards stay visually aligned
+- The app now supports a persisted light/dark theme toggle from the top-right corner
+- Theme preference is stored in `localStorage` under `financialHub.theme`
+- Dark mode uses CSS variable overrides in `frontend-react/src/index.css`
+- The sidebar rail stretches with the full page content height while keeping the inner navigation sticky on large screens
+- Theme-aware interaction effects are centralized through reusable CSS classes for buttons, cards, inputs, table rows, and sidebar navigation
+- `AppShell` updates pointer CSS variables on movement to support a subtle ambient hover glow without React state churn
+- `AppShell` also uses `ResizeObserver` on the content column to synchronize the sidebar rail height exactly with the rendered content height, without using viewport height as a floor
+- Hover contrast policy is now stronger by theme: light mode uses ink/black emphasis, while dark mode uses a vivid green accent glow
 
 ## Problems Found
 
@@ -212,6 +220,36 @@ All currently defined specification steps have been completed.
 - Post-spec investment color/alignment validation passed with `npm run build`
 - Post-spec investment color/alignment validation passed with `npm run lint`
 - Post-spec runtime validation confirmed the served frontend source includes `Add investment`, persisted investment colors, and equal-height overview grid classes
+- Post-spec overview alignment refinement added stronger equal-height panel constraints for the home summary/activity/portfolio/AI cards
+- Post-spec theme refinement added `frontend-react/src/lib/theme.ts` and a top-right light/dark toggle in `AppShell`
+- Post-spec About refinement replaced the simple technical grid with a low-code-style orchestration canvas using connected flow nodes
+- Post-spec theme/About/alignment validation passed with `npm run build`
+- Post-spec theme/About/alignment validation passed with `npm run lint`
+- Docker Compose runtime validation could not be completed at that moment because Docker Desktop was not running
+- Post-spec About expansion added a more detailed architecture canvas with Frontend SPA, user actions, Kotlin finance APIs, agent API, Spring AI native API, Orchestrator, FinancialAnalyst, InvestmentAdvisor, MCP server, MCP tools, PostgreSQL, and Groq/LLM
+- Post-spec theme toggle refinement replaced text-only theme indication with inline SVG sun and moon icons
+- Post-spec expanded About/theme validation passed with `npm run build`
+- Post-spec expanded About/theme validation passed with `npm run lint`
+- Post-spec runtime validation confirmed served source contains `SunIcon`, `MoonIcon`, `Frontend SPA`, `Finance APIs`, `FinancialAnalyst`, `InvestmentAdvisor`, and MCP tool names
+- Post-spec About rollback simplified the rendered System Flow back to macro nodes: Frontend SPA, Backend API, PostgreSQL, Agent layer, Tool server, and LLM provider
+- Post-spec About rollback clarified real relationships: frontend calls backend APIs, backend reads/writes PostgreSQL, backend can call Python agents, agents use MCP tools, and MCP tools also access PostgreSQL
+- Post-spec About rollback validation passed with `npm run build`
+- Post-spec About rollback validation passed with `npm run lint`
+- Post-spec sidebar/interaction refinement replaced the fixed-height sidebar with a stretching rail and sticky inner navigation
+- Post-spec sidebar/interaction refinement added theme-specific hover/focus polish for navigation, buttons, cards, inputs, tables, AI prompt buttons, and About flow nodes
+- Post-spec sidebar/interaction refinement validation passed with `npm run build`
+- Post-spec sidebar/interaction refinement validation passed with `npm run lint`
+- Post-spec runtime validation passed after `docker compose up -d --force-recreate frontend`; `GET http://localhost:5173/#overview` returned HTTP 200 and served source includes the new sidebar/interaction classes
+- Post-spec transactions sidebar refinement changed `AppShell` from a flex row to a responsive grid and added `ResizeObserver`-based sidebar height synchronization
+- Post-spec hover contrast refinement strengthened light-mode hover feedback with ink/black emphasis and dark-mode hover feedback with vivid green glow
+- Post-spec hover contrast refinement expanded reusable interaction classes to overview rows, portfolio cards, About flow connections, and the page hero
+- Post-spec transactions/sidebar hover refinement validation passed with `npm run build`
+- Post-spec transactions/sidebar hover refinement validation passed with `npm run lint`
+- Post-spec runtime validation passed after `docker compose up -d --force-recreate frontend`; `GET http://localhost:5173/#transactions` returned HTTP 200 and served source includes `ResizeObserver`
+- Post-spec transactions sidebar exact-height refinement removed viewport-based minimum heights from the sidebar/grid frame and now sets the rail `height` from the content column bounding box
+- Post-spec transactions sidebar exact-height refinement validation passed with `npm run build`
+- Post-spec transactions sidebar exact-height refinement validation passed with `npm run lint`
+- Post-spec transactions sidebar exact-height runtime validation passed after `docker compose up -d --force-recreate frontend`; `GET http://localhost:5173/#transactions` returned HTTP 200 and served source no longer includes sidebar viewport min-height classes
 - Manual end-to-end validation seeded:
   - transaction: `EXPENSE`, amount `125.75`, category `Groceries`, date `2026-04-29`
   - investment: asset `VALE3`, quantity `900.0000`, averagePrice `84.32`

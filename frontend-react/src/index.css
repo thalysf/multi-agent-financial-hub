@@ -3,23 +3,74 @@
 @theme {
   --font-display: "Space Grotesk", "Aptos Display", "Trebuchet MS", sans-serif;
   --font-body: "Manrope", "Aptos", "Segoe UI", sans-serif;
-  --color-ink: #13201a;
-  --color-moss: #1f4d38;
-  --color-fern: #4f7f52;
-  --color-sand: #f4ead7;
-  --color-cream: #fffaf0;
-  --color-clay: #c66f45;
-  --color-lagoon: #1d6f73;
+  --color-ink: var(--app-ink);
+  --color-moss: var(--app-moss);
+  --color-fern: var(--app-fern);
+  --color-sand: var(--app-sand);
+  --color-cream: var(--app-cream);
+  --color-clay: var(--app-clay);
+  --color-lagoon: var(--app-lagoon);
 }
 
 :root {
-  color: #13201a;
-  background: #f4ead7;
+  --app-ink: #13201a;
+  --app-moss: #1f4d38;
+  --app-fern: #4f7f52;
+  --app-sand: #f4ead7;
+  --app-cream: #fffaf0;
+  --app-clay: #c66f45;
+  --app-lagoon: #1d6f73;
+  --app-hover-signal: #13201a;
+  --app-hover-contrast: #fffaf0;
+
+  color: var(--app-ink);
+  background: var(--app-sand);
   font-family: var(--font-body);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+:root[data-theme='dark'] {
+  --app-ink: #0f1814;
+  --app-moss: #7ec7a2;
+  --app-fern: #9ccf8f;
+  --app-sand: #0d1411;
+  --app-cream: #fffaf0;
+  --app-clay: #f19768;
+  --app-lagoon: #52b7bd;
+  --app-hover-signal: #76f7a8;
+  --app-hover-contrast: #08100c;
+
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] .text-ink,
+:root[data-theme='dark'] [class*='text-ink/'] {
+  color: color-mix(in srgb, #fffaf0 82%, transparent);
+}
+
+:root[data-theme='dark'] .bg-cream,
+:root[data-theme='dark'] [class*='bg-cream/'] {
+  background-color: color-mix(in srgb, #17221d 88%, transparent);
+}
+
+:root[data-theme='dark'] .bg-white,
+:root[data-theme='dark'] [class*='bg-white/'] {
+  background-color: color-mix(in srgb, #fffaf0 10%, transparent);
+}
+
+:root[data-theme='dark'] [class*='border-white/'] {
+  border-color: color-mix(in srgb, #fffaf0 14%, transparent);
+}
+
+:root[data-theme='dark'] [class*='border-ink/'] {
+  border-color: color-mix(in srgb, #fffaf0 12%, transparent);
 }
 
 * {
@@ -49,4 +100,288 @@ button {
 
 #root {
   min-height: 100vh;
+}
+
+.app-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at var(--pointer-x, 78vw) var(--pointer-y, 12vh),
+    color-mix(in srgb, var(--app-clay) 18%, transparent),
+    transparent 28rem
+  );
+  opacity: 0.86;
+}
+
+:root[data-theme='dark'] .app-shell::before {
+  background: radial-gradient(
+    circle at var(--pointer-x, 78vw) var(--pointer-y, 12vh),
+    color-mix(in srgb, var(--app-lagoon) 14%, transparent),
+    transparent 30rem
+  );
+  opacity: 0.72;
+}
+
+.sidebar-rail {
+  background-image:
+    radial-gradient(circle at 18% 8%, color-mix(in srgb, var(--app-clay) 22%, transparent), transparent 22rem),
+    linear-gradient(160deg, #13201a 0%, #15261f 56%, #0f1914 100%);
+}
+
+:root[data-theme='dark'] .sidebar-rail {
+  background-image:
+    radial-gradient(circle at 18% 8%, color-mix(in srgb, var(--app-lagoon) 18%, transparent), transparent 22rem),
+    linear-gradient(160deg, #0f1814 0%, #14211c 58%, #0a100d 100%);
+  box-shadow:
+    0 28px 70px color-mix(in srgb, #000 34%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--app-lagoon) 8%, transparent);
+}
+
+.interactive-surface,
+.card-hover,
+.input-field,
+.table-row-hover {
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    opacity 180ms ease;
+}
+
+.interactive-surface {
+  will-change: transform;
+}
+
+.interactive-surface:active {
+  transform: translateY(0) scale(0.99);
+}
+
+.nav-pill,
+.nav-card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.nav-pill {
+  border: 1px solid transparent;
+}
+
+.nav-pill > *,
+.nav-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.nav-pill::before,
+.nav-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    120deg,
+    transparent 0%,
+    color-mix(in srgb, var(--app-cream) 22%, transparent) 42%,
+    transparent 72%
+  );
+  opacity: 0;
+  transform: translateX(-24%);
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
+}
+
+.nav-pill-active {
+  border-color: color-mix(in srgb, var(--app-cream) 42%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 30%, transparent);
+}
+
+.nav-card-active {
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--app-cream) 18%, transparent);
+}
+
+.theme-toggle {
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease;
+}
+
+.input-field {
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    color 180ms ease;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--app-clay) 38%, transparent);
+  outline-offset: 3px;
+}
+
+:root[data-theme='dark'] button:focus-visible,
+:root[data-theme='dark'] input:focus-visible,
+:root[data-theme='dark'] textarea:focus-visible {
+  outline-color: color-mix(in srgb, var(--app-lagoon) 44%, transparent);
+}
+
+@media (hover: hover) {
+  .interactive-surface:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 20px 46px color-mix(in srgb, var(--app-hover-signal) 24%, transparent),
+      0 0 0 2px color-mix(in srgb, var(--app-hover-signal) 72%, transparent),
+      inset 0 1px 0 color-mix(in srgb, #fff 32%, transparent);
+  }
+
+  :root[data-theme='light'] button.interactive-surface:hover:not(.nav-pill):not(.nav-card):not(.theme-toggle) {
+    background-color: var(--app-hover-signal);
+    color: var(--app-hover-contrast);
+  }
+
+  :root[data-theme='dark'] .interactive-surface:hover {
+    box-shadow:
+      0 20px 44px color-mix(in srgb, #000 40%, transparent),
+      0 0 0 2px color-mix(in srgb, var(--app-hover-signal) 68%, transparent),
+      0 0 34px color-mix(in srgb, var(--app-hover-signal) 26%, transparent);
+  }
+
+  :root[data-theme='dark'] button.interactive-surface:hover:not(.nav-pill):not(.nav-card):not(.theme-toggle) {
+    background-color: color-mix(in srgb, var(--app-hover-signal) 24%, transparent);
+    color: var(--app-cream);
+  }
+
+  .nav-pill:hover,
+  .nav-card:hover {
+    border-color: color-mix(in srgb, var(--app-hover-signal) 68%, transparent);
+    background-color: var(--app-cream);
+    color: var(--app-hover-signal);
+    box-shadow:
+      0 18px 38px color-mix(in srgb, var(--app-hover-signal) 24%, transparent),
+      0 0 0 2px color-mix(in srgb, var(--app-hover-signal) 72%, transparent);
+  }
+
+  .nav-pill:hover::before,
+  .nav-card:hover::before {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  :root[data-theme='dark'] .nav-pill:hover,
+  :root[data-theme='dark'] .nav-card:hover {
+    border-color: color-mix(in srgb, var(--app-hover-signal) 74%, transparent);
+    background-color: color-mix(in srgb, var(--app-hover-signal) 18%, transparent);
+    color: var(--app-cream);
+    box-shadow:
+      0 20px 44px color-mix(in srgb, #000 42%, transparent),
+      0 0 34px color-mix(in srgb, var(--app-hover-signal) 28%, transparent),
+      0 0 0 2px color-mix(in srgb, var(--app-hover-signal) 64%, transparent);
+  }
+
+  :root[data-theme='dark'] .nav-pill::before,
+  :root[data-theme='dark'] .nav-card::before {
+    background: linear-gradient(
+      120deg,
+      transparent 0%,
+      color-mix(in srgb, var(--app-hover-signal) 28%, transparent) 42%,
+      transparent 72%
+    );
+  }
+
+  .theme-toggle:hover {
+    border-color: color-mix(in srgb, var(--app-hover-signal) 76%, transparent);
+    background-color: var(--app-hover-signal);
+    color: var(--app-hover-contrast);
+    box-shadow:
+      0 18px 42px color-mix(in srgb, var(--app-hover-signal) 26%, transparent),
+      0 0 0 2px color-mix(in srgb, var(--app-hover-signal) 18%, transparent);
+  }
+
+  :root[data-theme='dark'] .theme-toggle:hover {
+    border-color: color-mix(in srgb, var(--app-hover-signal) 78%, transparent);
+    background-color: color-mix(in srgb, var(--app-hover-signal) 22%, #17221d);
+    color: var(--app-cream);
+    box-shadow:
+      0 18px 38px color-mix(in srgb, #000 34%, transparent),
+      0 0 34px color-mix(in srgb, var(--app-hover-signal) 28%, transparent);
+  }
+
+  .card-hover:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--app-hover-signal) 64%, transparent);
+    box-shadow:
+      0 26px 58px color-mix(in srgb, var(--app-hover-signal) 20%, transparent),
+      0 0 0 2px color-mix(in srgb, var(--app-hover-signal) 42%, transparent),
+      inset 0 1px 0 color-mix(in srgb, #fff 34%, transparent);
+  }
+
+  :root[data-theme='dark'] .card-hover:hover {
+    border-color: color-mix(in srgb, var(--app-hover-signal) 58%, transparent);
+    box-shadow:
+      0 26px 56px color-mix(in srgb, #000 34%, transparent),
+      0 0 38px color-mix(in srgb, var(--app-hover-signal) 20%, transparent),
+      0 0 0 2px color-mix(in srgb, var(--app-hover-signal) 36%, transparent),
+      inset 0 1px 0 color-mix(in srgb, #fffaf0 8%, transparent);
+  }
+
+  .input-field:hover {
+    border-color: color-mix(in srgb, var(--app-hover-signal) 62%, transparent);
+    background-color: color-mix(in srgb, #fff 90%, var(--app-hover-signal));
+    box-shadow:
+      0 12px 28px color-mix(in srgb, var(--app-hover-signal) 14%, transparent),
+      0 0 0 2px color-mix(in srgb, var(--app-hover-signal) 20%, transparent);
+  }
+
+  :root[data-theme='dark'] .input-field:hover {
+    border-color: color-mix(in srgb, var(--app-hover-signal) 58%, transparent);
+    background-color: color-mix(in srgb, var(--app-hover-signal) 13%, transparent);
+    box-shadow:
+      0 12px 28px color-mix(in srgb, #000 28%, transparent),
+      0 0 26px color-mix(in srgb, var(--app-hover-signal) 14%, transparent);
+  }
+
+  .table-row-hover:hover {
+    transform: translateY(-1px);
+    background-color: color-mix(in srgb, #fff 86%, var(--app-hover-signal));
+    box-shadow:
+      0 12px 28px color-mix(in srgb, var(--app-hover-signal) 16%, transparent),
+      0 0 0 1px color-mix(in srgb, var(--app-hover-signal) 36%, transparent);
+  }
+
+  :root[data-theme='dark'] .table-row-hover:hover {
+    background-color: color-mix(in srgb, var(--app-hover-signal) 13%, transparent);
+    box-shadow:
+      0 14px 30px color-mix(in srgb, #000 28%, transparent),
+      0 0 24px color-mix(in srgb, var(--app-hover-signal) 12%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell::before,
+  .interactive-surface,
+  .card-hover,
+  .input-field,
+  .nav-pill::before,
+  .nav-card::before,
+  .table-row-hover {
+    transition: none;
+  }
+
+  .interactive-surface:hover,
+  .interactive-surface:active,
+  .card-hover:hover,
+  .table-row-hover:hover {
+    transform: none;
+  }
 }

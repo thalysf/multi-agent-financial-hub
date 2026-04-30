@@ -17,7 +17,7 @@ export function Card({ children, className, tone = 'cream', ...props }: CardProp
   return (
     <div
       className={cn(
-        'flex h-full flex-col rounded-[2rem] border p-5 shadow-xl backdrop-blur',
+        'card-hover flex h-full flex-col rounded-[2rem] border p-5 shadow-xl backdrop-blur',
         tones[tone],
         className,
       )}

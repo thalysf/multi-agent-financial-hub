@@ -246,7 +246,7 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
 
   return (
     <>
-      <header className="rounded-[2rem] border border-white/70 bg-cream/82 p-4 shadow-xl shadow-moss/10 backdrop-blur md:p-6 2xl:p-8">
+      <header className="card-hover rounded-[2rem] border border-white/70 bg-cream/82 p-4 shadow-xl shadow-moss/10 backdrop-blur md:p-6 2xl:p-8">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div>
             <p className="text-sm font-bold uppercase tracking-[0.28em] text-clay">
@@ -294,7 +294,7 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
           <label className="grid gap-2 text-sm font-black text-ink/70">
             Type
             <select
-              className="w-full rounded-2xl border border-ink/10 bg-white/72 px-4 py-3 text-sm font-semibold text-ink outline-none focus:border-moss/40 focus:ring-4 focus:ring-moss/10"
+              className="input-field w-full rounded-2xl border border-ink/10 bg-white/72 px-4 py-3 text-sm font-semibold text-ink outline-none focus:border-moss/40 focus:ring-4 focus:ring-moss/10"
               onChange={(event) =>
                 setTransactionForm((current) => ({
                   ...current,
@@ -420,7 +420,7 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
       <>
         <section className="grid auto-rows-fr items-stretch gap-4 md:grid-cols-3 2xl:gap-6">
           {summaryCards.map((card) => (
-            <Card className="justify-between 2xl:min-h-48" key={card.label} tone={card.tone}>
+            <Card className="min-h-44 justify-between 2xl:min-h-48" key={card.label} tone={card.tone}>
               <p className="text-sm font-bold opacity-75">{card.label}</p>
               <div>
                 <p className="mt-5 font-display text-4xl font-black tracking-[-0.07em] 2xl:text-5xl">
@@ -432,9 +432,9 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
           ))}
         </section>
 
-        <section className="grid auto-rows-fr items-stretch gap-4 xl:grid-cols-[1fr_0.9fr_1.1fr] 2xl:gap-6">
-          <Card>
-            <div className="flex items-center justify-between gap-4">
+        <section className="grid auto-rows-fr items-stretch gap-4 xl:grid-cols-3 2xl:gap-6">
+          <Card className="min-h-[34rem]">
+            <div className="flex min-h-24 items-start justify-between gap-4">
               <div>
                 <Badge>Recent activity</Badge>
                 <h3 className="mt-3 font-display text-3xl font-black tracking-[-0.07em]">
@@ -448,7 +448,7 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
             <div className="mt-5 flex flex-1 flex-col gap-3">
               {recentTransactions.map((transaction) => (
                 <div
-                  className="flex items-center justify-between gap-4 rounded-[1.25rem] bg-white/58 p-4"
+                  className="interactive-surface flex min-h-[4.75rem] items-center justify-between gap-4 rounded-[1.25rem] bg-white/58 p-4 hover:bg-white/80"
                   key={transaction.id}
                 >
                   <div>
@@ -472,15 +472,17 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
             </div>
           </Card>
 
-          <Card tone="ink">
-            <Badge tone="cream">Portfolio pulse</Badge>
-            <h3 className="mt-3 font-display text-3xl font-black tracking-[-0.07em]">
-              Position snapshot
-            </h3>
+          <Card className="min-h-[34rem]" tone="ink">
+            <div className="min-h-24">
+              <Badge tone="cream">Portfolio pulse</Badge>
+              <h3 className="mt-3 font-display text-3xl font-black tracking-[-0.07em]">
+                Position snapshot
+              </h3>
+            </div>
             <div className="mt-5 flex flex-1 flex-col gap-3">
               {recentInvestments.slice(0, 3).map((investment) => (
                 <div
-                  className="flex items-center justify-between gap-4 rounded-[1.25rem] border border-cream/10 bg-cream/8 p-4"
+                  className="interactive-surface flex min-h-[4.75rem] items-center justify-between gap-4 rounded-[1.25rem] border border-cream/10 bg-cream/8 p-4 hover:bg-cream/14"
                   key={investment.id}
                 >
                   <div className="flex items-center gap-3">
@@ -511,20 +513,22 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
                 </p>
               ) : null}
             </div>
-            <Button className="mt-5" onClick={() => onNavigate('investments')} variant="ghost">
+            <Button className="mt-auto" onClick={() => onNavigate('investments')} variant="ghost">
               Open portfolio
             </Button>
           </Card>
 
-          <Card tone="clay">
-            <Badge tone="cream">Ask next</Badge>
-            <h3 className="mt-3 font-display text-3xl font-black leading-none tracking-[-0.08em]">
-              Questions ready for the assistant.
-            </h3>
+          <Card className="min-h-[34rem]" tone="clay">
+            <div className="min-h-24">
+              <Badge tone="cream">Ask next</Badge>
+              <h3 className="mt-3 font-display text-3xl font-black leading-none tracking-[-0.08em]">
+                Questions ready for the assistant.
+              </h3>
+            </div>
             <div className="mt-5 grid flex-1 content-start gap-3">
               {aiSuggestions.map((suggestion) => (
                 <button
-                  className="rounded-[1.25rem] border border-white/16 bg-white/14 p-4 text-left text-sm font-bold leading-6 text-cream transition hover:-translate-y-0.5 hover:bg-white/22"
+                  className="interactive-surface min-h-[4.75rem] rounded-[1.25rem] border border-white/16 bg-white/14 p-4 text-left text-sm font-bold leading-6 text-cream hover:bg-white/22"
                   key={suggestion}
                   onClick={() => askWithPrompt(suggestion)}
                   type="button"
@@ -649,7 +653,7 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
           <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
             {investments.map((investment) => (
               <article
-                className="rounded-[1.5rem] border border-ink/8 bg-white/58 p-4"
+                className="interactive-surface rounded-[1.5rem] border border-ink/8 bg-white/58 p-4 hover:bg-white/80"
                 key={investment.id}
               >
                 <div className="flex items-center gap-3">
@@ -738,7 +742,7 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
                 <div className="mt-5 grid gap-3 md:grid-cols-3">
                   {aiSuggestions.map((suggestion) => (
                     <button
-                      className="rounded-[1.25rem] border border-ink/8 bg-white/64 p-4 text-left text-sm font-bold leading-6 text-ink/70 transition hover:-translate-y-0.5 hover:bg-white"
+                      className="interactive-surface rounded-[1.25rem] border border-ink/8 bg-white/64 p-4 text-left text-sm font-bold leading-6 text-ink/70 hover:bg-white"
                       key={suggestion}
                       onClick={() => setAiPrompt(suggestion)}
                       type="button"
@@ -756,76 +760,131 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
   }
 
   function renderAboutModule() {
-    const flow = [
+    const macroFlow = [
       {
-        description: 'User actions, dashboard modules, and assistant prompts.',
-        label: 'Frontend',
+        chip: 'React',
+        description: 'Dashboard modules, forms, theme, and AI prompt entry points.',
+        label: 'Frontend SPA',
       },
       {
-        description: 'REST APIs for finance data, orchestration, and native AI summary.',
-        label: 'Kotlin backend',
+        chip: 'Kotlin',
+        description: 'Spring Boot REST APIs for finance CRUD, AI bridge, and Spring AI summary.',
+        label: 'Backend API',
       },
       {
-        description: 'Routes questions to specialized financial agents.',
-        label: 'Agent orchestrator',
+        chip: 'Python',
+        description: 'Orchestrator routes questions to financial and investment agents.',
+        label: 'Agent layer',
       },
       {
-        description: 'Standard tool layer that exposes trusted project capabilities.',
-        label: 'MCP tools',
+        chip: 'MCP',
+        description: 'Controlled tool boundary: get_transactions, add_transaction, get_investments.',
+        label: 'Tool server',
       },
       {
-        description: 'Persistent source for transactions and investments.',
+        chip: 'Data',
+        description: 'Shared persistence used by the backend APIs and by MCP tools.',
         label: 'PostgreSQL',
       },
       {
-        description: 'Generates contextual explanations from retrieved data.',
-        label: 'LLM',
+        chip: 'LLM',
+        description: 'Groq-backed model receives context and returns the final explanation.',
+        label: 'LLM provider',
       },
     ]
 
-    return (
-      <section className="grid gap-4 xl:grid-cols-[0.72fr_1.28fr] 2xl:gap-6">
-        <Card tone="ink">
-          <Badge tone="cream">About</Badge>
-          <h3 className="mt-3 font-display text-4xl font-black leading-none tracking-[-0.08em]">
-            How this lab is wired.
-          </h3>
-          <p className="mt-5 text-sm leading-7 text-cream/70">
-            This page keeps the technical story out of the main dashboard, while still making
-            the architecture visible when you want to study or explain the project.
-          </p>
-        </Card>
-
-        <Card>
-          <Badge tone="clay">System flow</Badge>
-          <div className="mt-6 grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
-            {flow.map((item, index) => (
-              <article
-                className="relative rounded-[1.5rem] border border-ink/8 bg-white/60 p-4"
-                key={item.label}
-              >
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-ink font-black text-cream">
-                  {index + 1}
-                </span>
-                <h4 className="mt-4 font-display text-2xl font-black tracking-[-0.07em]">
-                  {item.label}
-                </h4>
-                <p className="mt-2 text-sm leading-6 text-ink/62">{item.description}</p>
-              </article>
-            ))}
-          </div>
-          <div className="mt-6 rounded-[1.5rem] bg-[linear-gradient(135deg,rgba(31,77,56,0.12),rgba(198,111,69,0.12))] p-5">
-            <p className="text-sm font-black uppercase tracking-[0.18em] text-moss">
-              Orchestration idea
-            </p>
-            <p className="mt-3 text-sm leading-7 text-ink/68">
-              The UI triggers backend APIs. The backend can either serve finance data directly
-              or forward analysis requests to the Python orchestrator. Agents call MCP tools to
-              retrieve real data, then the LLM turns that context into an explanation.
-            </p>
-          </div>
-        </Card>
-      </section>
-    )
+    return <AboutMacroFlow macroFlow={macroFlow} />
   }
+}
+
+type FlowNodeProps = {
+  chip: string
+  description: string
+  label: string
+}
+
+type AboutMacroFlowProps = {
+  macroFlow: FlowNodeProps[]
+}
+
+function AboutMacroFlow({ macroFlow }: AboutMacroFlowProps) {
+  return (
+    <section className="grid gap-4 xl:grid-cols-[0.72fr_1.28fr] 2xl:gap-6">
+      <Card tone="ink">
+        <Badge tone="cream">About</Badge>
+        <h3 className="mt-3 font-display text-4xl font-black leading-none tracking-[-0.08em]">
+          How this lab is wired.
+        </h3>
+        <p className="mt-5 text-sm leading-7 text-cream/70">
+          A macro view of how the product UI, backend APIs, agents, MCP tools,
+          database, and LLM work together without crowding the main dashboard.
+        </p>
+      </Card>
+
+      <Card>
+        <Badge tone="clay">System flow</Badge>
+        <div className="mt-6 rounded-[1.75rem] border border-ink/8 bg-[radial-gradient(circle_at_top_left,rgba(198,111,69,0.14),transparent_30%),linear-gradient(135deg,rgba(255,250,240,0.62),rgba(255,255,255,0.2))] p-4 2xl:p-5">
+          <div className="grid gap-4 lg:grid-cols-3">
+            <FlowNode {...macroFlow[0]} />
+            <FlowNode {...macroFlow[1]} />
+            <FlowNode {...macroFlow[4]} />
+          </div>
+
+          <div className="my-4 grid gap-3 lg:grid-cols-3">
+            <FlowConnection label="Frontend calls backend APIs" />
+            <FlowConnection label="Backend reads and writes PostgreSQL" />
+            <FlowConnection label="Backend can call Python agents" />
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-3">
+            <FlowNode {...macroFlow[2]} />
+            <FlowNode {...macroFlow[3]} />
+            <FlowNode {...macroFlow[5]} />
+          </div>
+
+          <div className="mt-4 grid gap-3 lg:grid-cols-3">
+            <FlowConnection label="Agents request MCP tools" />
+            <FlowConnection label="MCP tools also access PostgreSQL" />
+            <FlowConnection label="LLM turns context into an answer" />
+          </div>
+        </div>
+
+        <div className="mt-6 rounded-[1.5rem] bg-[linear-gradient(135deg,rgba(31,77,56,0.12),rgba(198,111,69,0.12))] p-5">
+          <p className="text-sm font-black uppercase tracking-[0.18em] text-moss">
+            Real flow
+          </p>
+          <p className="mt-3 text-sm leading-7 text-ink/68">
+            Finance CRUD goes from frontend to Kotlin APIs and then directly to
+            PostgreSQL. AI analysis goes from Kotlin to Python agents; agents use
+            MCP tools, and those tools also read or write PostgreSQL before the
+            LLM produces a contextual answer.
+          </p>
+        </div>
+      </Card>
+    </section>
+  )
+}
+
+function FlowNode({ chip, description, label }: FlowNodeProps) {
+  return (
+    <article className="interactive-surface group relative min-h-36 rounded-[1.25rem] border border-ink/8 bg-white/62 p-4 shadow-lg shadow-moss/5 hover:bg-white/78">
+      <span className="absolute -left-1 top-1/2 hidden h-3 w-3 -translate-y-1/2 rounded-full border-2 border-cream bg-clay lg:block" />
+      <span className="absolute -right-1 top-1/2 hidden h-3 w-3 -translate-y-1/2 rounded-full border-2 border-cream bg-lagoon lg:block" />
+      <span className="rounded-full bg-ink px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-cream">
+        {chip}
+      </span>
+      <h4 className="mt-4 font-display text-xl font-black tracking-[-0.07em] text-ink">
+        {label}
+      </h4>
+      <p className="mt-2 text-sm leading-6 text-ink/62">{description}</p>
+    </article>
+  )
+}
+
+function FlowConnection({ label }: { label: string }) {
+  return (
+    <div className="interactive-surface rounded-2xl border border-ink/8 bg-white/50 px-4 py-3 text-sm font-black text-ink/64">
+      {label}
+    </div>
+  )
 }

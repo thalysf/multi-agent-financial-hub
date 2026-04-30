@@ -29,7 +29,7 @@ export function Table<T>({ columns, rows }: TableProps<T>) {
         </thead>
         <tbody>
           {rows.map((row, rowIndex) => (
-            <tr className="rounded-2xl bg-white/56" key={rowIndex}>
+            <tr className="table-row-hover rounded-2xl bg-white/56" key={rowIndex}>
               {columns.map((column, columnIndex) => (
                 <td
                   className={`px-4 py-3 text-sm font-semibold text-ink/74 ${
