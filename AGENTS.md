@@ -4,7 +4,7 @@
 
 This file tracks the real implementation state of the project.
 
-Step 1, Step 2, Step 3, Step 4, and Step 5 have been completed.
+Step 1, Step 2, Step 3, Step 4, Step 5, and Step 6 have been completed.
 
 Frontend is part of the project specification, but it has not been started yet.
 
@@ -15,6 +15,7 @@ Frontend is part of the project specification, but it has not been started yet.
 - Step 3 - Backend Modularization
 - Step 4 - Investments Module
 - Step 5 - MCP Server
+- Step 6 - Multi-Agent System
 
 ## Current Step
 
@@ -22,7 +23,7 @@ Frontend is part of the project specification, but it has not been started yet.
 
 ## Next Steps
 
-- Step 6 - Multi-Agent System
+- Step 7 - LLM Integration
 
 ## Decisions Taken
 
@@ -54,6 +55,9 @@ Frontend is part of the project specification, but it has not been started yet.
 - MCP server database configuration is driven by environment variables with defaults aligned to the root `docker-compose.yml`
 - Step 5 validation uses an in-memory MCP client session to execute the mandatory tools locally against the real PostgreSQL database
 - MCP server Python code is organized as an installable `src/` layout package named `financial_hub_mcp`
+- The initial multi-agent system is deterministic and does not use an LLM yet, because LLM integration belongs to Step 7
+- The agent system is organized as an installable `src/` layout package named `financial_hub_agents`
+- Specialized agents must access project data through MCP tools instead of direct database access
 
 ## Problems Found
 
@@ -78,3 +82,5 @@ Frontend is part of the project specification, but it has not been started yet.
 - MCP server implementation now exists in `mcp-server/` with `get_transactions`, `add_transaction`, and `get_investments`
 - Step 5 validation confirmed mandatory MCP tool registration plus real PostgreSQL reads and writes through `python tests/smoke_test.py`
 - MCP server structure separates server creation, tool registration, database access, schemas, and configuration
+- Initial multi-agent implementation now exists in `agents-python/` with `Orchestrator`, `FinancialAnalyst`, and `InvestmentAdvisor`
+- Step 6 validation confirmed routing behavior and MCP-backed agent responses through `python tests/smoke_test.py`
