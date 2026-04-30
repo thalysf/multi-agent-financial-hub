@@ -134,6 +134,7 @@ All currently defined specification steps have been completed.
 - Frontend row/card CRUD action buttons use accessible icon-only buttons instead of visible Edit/Delete text
 - Frontend row/card CRUD action buttons use the local `ActionIconButton` pattern with explicit SVG sizing/stroke to avoid invisible icons from utility-class conflicts
 - The Transactions Quick Insight card should behave as a full lateral panel on wide layouts, not as a small summary tile
+- Root `README.md` is now the public onboarding document for architecture, local execution, API examples, diagrams, validation, and demo guidance
 
 ## Problems Found
 
@@ -295,6 +296,7 @@ All currently defined specification steps have been completed.
 - Post-spec CRUD action/Quick Insight refinement validation passed with `npm run lint`
 - Post-spec CRUD action icon visibility refinement validation passed with `npm run build`
 - Post-spec CRUD action icon visibility refinement validation passed with `npm run lint`
+- Post-spec documentation refinement added a root `README.md` with technology badges, Mermaid architecture/sequence/data diagrams, local Docker instructions, endpoint reference, validation commands, troubleshooting, and demo data guidance
 - Manual end-to-end validation seeded:
   - transaction: `EXPENSE`, amount `125.75`, category `Groceries`, date `2026-04-29`
   - investment: asset `VALE3`, quantity `900.0000`, averagePrice `84.32`
