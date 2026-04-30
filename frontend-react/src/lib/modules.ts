@@ -1,4 +1,4 @@
-export type ModuleId = 'overview' | 'transactions' | 'investments' | 'ai-desk'
+export type ModuleId = 'overview' | 'transactions' | 'investments' | 'ai-desk' | 'about'
 
 export type ModuleItem = {
   id: ModuleId
@@ -13,7 +13,15 @@ export const modules: ModuleItem[] = [
   { id: 'ai-desk', label: 'AI desk', helper: 'Agent analysis' },
 ]
 
+export const aboutModule: ModuleItem = {
+  id: 'about',
+  label: 'About',
+  helper: 'System flow',
+}
+
 export function parseModuleHash(hash: string): ModuleId {
   const normalized = hash.replace('#', '') as ModuleId
-  return modules.some((module) => module.id === normalized) ? normalized : 'overview'
+  return [...modules, aboutModule].some((module) => module.id === normalized)
+    ? normalized
+    : 'overview'
 }

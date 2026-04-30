@@ -102,11 +102,17 @@ All currently defined specification steps have been completed.
 - Frontend summary cards are calculated from live backend data instead of static preview arrays
 - Backend CORS is configured in `backend-kotlin/src/main/kotlin/com/financialhub/backend/config/WebConfig.kt` for `http://localhost:5173` and `http://127.0.0.1:5173`
 - Post-spec frontend navigation uses hash-backed modules without adding a routing library
-- Available frontend modules are `overview`, `transactions`, `investments`, and `ai-desk`
+- Available frontend modules are `overview`, `transactions`, `investments`, `ai-desk`, and a discreet `about`
 - Sidebar items and primary dashboard actions now switch active modules instead of only scrolling to sections
 - Transaction creation is available through a frontend modal that calls `POST /transactions`
 - Investment creation is available through a frontend modal that calls `POST /investments`
 - Ultra-wide layout now removes the narrow 2xl max-width cap and uses wider grids to better fill large monitors
+- The Overview module is product-focused and should avoid excessive shortcut cards
+- Technical architecture explanations should stay in the discreet About module instead of the main dashboard copy
+- Overview prebuilt AI questions set the prompt and navigate directly to the AI desk
+- Investment visual colors are assigned in the frontend and persisted in `localStorage` by investment id
+- Investment colors must be vibrant HSL colors, avoiding gray/white/low-saturation tones
+- Overview cards should use equal-height grid behavior so stacked/wrapped cards stay visually aligned
 
 ## Problems Found
 
@@ -194,6 +200,18 @@ All currently defined specification steps have been completed.
 - Post-spec runtime validation confirmed the same backend requests used by frontend modals can create a transaction and an investment successfully
 - Post-spec runtime validation confirmed `POST /ai/analyze` still works after the frontend changes
 - Temporary validation records `Frontend Modal Test` and `FRONT11` were removed after runtime validation
+- Post-spec home refinement replaced module shortcut cards with financial summaries, recent transaction activity, portfolio snapshot, and prepared AI questions
+- Post-spec home refinement removed explicit technical copy from the main hero and sidebar
+- Post-spec home refinement added a discreet About module with a visual system flow covering frontend, Kotlin backend, agents, MCP tools, PostgreSQL, and LLM
+- Post-spec home refinement validation passed with `npm run build`
+- Post-spec home refinement validation passed with `npm run lint`
+- Post-spec runtime validation confirmed `GET http://localhost:5173/#overview` and `GET http://localhost:5173/#about` return HTTP 200
+- Post-spec investment color refinement added `frontend-react/src/lib/investmentColors.ts`
+- Post-spec investment color refinement replaced fixed investment dot colors with persisted random strong colors
+- Post-spec home alignment refinement made cards flex-based and used equal-height overview grids
+- Post-spec investment color/alignment validation passed with `npm run build`
+- Post-spec investment color/alignment validation passed with `npm run lint`
+- Post-spec runtime validation confirmed the served frontend source includes `Add investment`, persisted investment colors, and equal-height overview grid classes
 - Manual end-to-end validation seeded:
   - transaction: `EXPENSE`, amount `125.75`, category `Groceries`, date `2026-04-29`
   - investment: asset `VALE3`, quantity `900.0000`, averagePrice `84.32`

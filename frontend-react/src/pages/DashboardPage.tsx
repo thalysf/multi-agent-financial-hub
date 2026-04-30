@@ -25,6 +25,10 @@ import {
   getTransactions,
 } from '../lib/api'
 import { formatCompactCurrency, formatCurrency, formatDate } from '../lib/format'
+import {
+  ensureInvestmentColors,
+  getStoredInvestmentColors,
+} from '../lib/investmentColors'
 import type { ModuleId } from '../lib/modules'
 
 type DashboardPageProps = {
@@ -49,6 +53,7 @@ async function loadDashboardData() {
 export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [investments, setInvestments] = useState<Investment[]>([])
+  const [investmentColors, setInvestmentColors] = useState(() => getStoredInvestmentColors())
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [transactionFilter, setTransactionFilter] = useState('')
@@ -88,38 +93,39 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
       .toLowerCase()
       .includes(normalizedFilter),
   )
+  const recentTransactions = [...transactions]
+    .sort((first, second) => second.date.localeCompare(first.date) || second.id - first.id)
+    .slice(0, 4)
+  const largestExpense = transactions
+    .filter((transaction) => transaction.type === 'EXPENSE')
+    .sort((first, second) => Number(second.amount) - Number(first.amount))[0]
+  const recentInvestments = investments.slice(0, 6)
 
   const summaryCards: Array<{
-    action: () => void
-    actionLabel: string
     detail: string
     label: string
     tone: SummaryTone
     value: string
   }> = [
     {
-      action: () => onNavigate('transactions'),
-      actionLabel: 'Open transactions',
-      label: 'Net cash flow',
+      label: 'Cash balance',
       value: formatCompactCurrency(incomeTotal - expenseTotal),
-      detail: `${transactions.length} transactions loaded from Kotlin`,
+      detail: `${formatCurrency(incomeTotal)} in, ${formatCurrency(expenseTotal)} out`,
       tone: 'cream',
     },
     {
-      action: () => onNavigate('investments'),
-      actionLabel: 'Open investments',
-      label: 'Portfolio cost',
-      value: formatCompactCurrency(investmentCostTotal),
-      detail: `${investments.length} investments from PostgreSQL`,
-      tone: 'lagoon',
+      label: 'Spending focus',
+      value: largestExpense ? largestExpense.category : 'Clear',
+      detail: largestExpense
+        ? `${formatCurrency(Number(largestExpense.amount))} largest expense`
+        : 'No expense registered yet',
+      tone: 'clay',
     },
     {
-      action: () => onNavigate('ai-desk'),
-      actionLabel: 'Open AI desk',
-      label: 'AI readiness',
-      value: aiResponse ? aiResponse.routedTo : 'Ready',
-      detail: aiResponse ? aiResponse.routingReason : 'Python agents available through backend',
-      tone: 'clay',
+      label: 'Portfolio base',
+      value: formatCompactCurrency(investmentCostTotal),
+      detail: `${investments.length} registered position${investments.length === 1 ? '' : 's'}`,
+      tone: 'lagoon',
     },
   ]
 
@@ -134,6 +140,7 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
           startTransition(() => {
             setTransactions(transactionsResult)
             setInvestments(investmentsResult)
+            setInvestmentColors((current) => ensureInvestmentColors(investmentsResult, current))
             setLoadError(null)
           })
         }
@@ -163,6 +170,7 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
       const { investmentsResult, transactionsResult } = await loadDashboardData()
       setTransactions(transactionsResult)
       setInvestments(investmentsResult)
+      setInvestmentColors((current) => ensureInvestmentColors(investmentsResult, current))
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : 'Could not load dashboard data')
     } finally {
@@ -196,6 +204,7 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
     try {
       const created = await createInvestment(investmentForm)
       setInvestments((current) => [created, ...current])
+      setInvestmentColors((current) => ensureInvestmentColors([created], current))
       setInvestmentForm({ asset: '', averagePrice: '', quantity: '' })
       setActiveModal(null)
       onNavigate('investments')
@@ -225,6 +234,11 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
     }
   }
 
+  function askWithPrompt(question: string) {
+    setAiPrompt(question)
+    onNavigate('ai-desk')
+  }
+
   function openModal(type: Exclude<ModalType, null>) {
     setFormError(null)
     setActiveModal(type)
@@ -236,14 +250,13 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
         <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div>
             <p className="text-sm font-bold uppercase tracking-[0.28em] text-clay">
-              Modular finance cockpit
+              Personal finance cockpit
             </p>
             <h2 className="mt-3 max-w-5xl font-display text-4xl font-black leading-[0.95] tracking-[-0.08em] text-ink sm:text-6xl 2xl:text-7xl">
-              Finances, agents, and signals in one calm dashboard.
+              A calmer home for decisions about money.
             </h2>
             <p className="mt-4 max-w-3xl text-sm leading-6 text-ink/60 sm:text-base 2xl:text-lg 2xl:leading-8">
-              Live data from Kotlin, PostgreSQL, Python agents, MCP tools, Groq,
-              and Spring AI.
+              Follow your cash movement, portfolio base, and questions worth asking next.
             </p>
           </div>
           <div className="grid gap-2 sm:grid-cols-3 xl:min-w-[34rem]">
@@ -260,7 +273,7 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
 
       {loadError ? (
         <Card className="border-clay/30 bg-clay/12">
-          <p className="font-black text-clay">Could not load live dashboard data.</p>
+          <p className="font-black text-clay">Could not load dashboard data.</p>
           <p className="mt-2 text-sm text-ink/64">{loadError}</p>
         </Card>
       ) : null}
@@ -269,9 +282,10 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
       {activeModule === 'transactions' ? renderTransactionsModule() : null}
       {activeModule === 'investments' ? renderInvestmentsModule() : null}
       {activeModule === 'ai-desk' ? renderAiModule() : null}
+      {activeModule === 'about' ? renderAboutModule() : null}
 
       <Modal
-        description="This creates a real row through the Kotlin backend and refreshes the live dashboard state."
+        description="Create a cash movement and keep the dashboard in sync."
         isOpen={activeModal === 'transaction'}
         onClose={() => setActiveModal(null)}
         title="New transaction"
@@ -339,7 +353,7 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
       </Modal>
 
       <Modal
-        description="This creates a real investment through the Kotlin backend and updates portfolio cards."
+        description="Create a portfolio position and update the investment snapshot."
         isOpen={activeModal === 'investment'}
         onClose={() => setActiveModal(null)}
         title="New investment"
@@ -404,46 +418,122 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
   function renderOverviewModule() {
     return (
       <>
-        <section className="grid gap-4 md:grid-cols-3 2xl:gap-6">
+        <section className="grid auto-rows-fr items-stretch gap-4 md:grid-cols-3 2xl:gap-6">
           {summaryCards.map((card) => (
-            <Card className="2xl:min-h-56" key={card.label} tone={card.tone}>
+            <Card className="justify-between 2xl:min-h-48" key={card.label} tone={card.tone}>
               <p className="text-sm font-bold opacity-75">{card.label}</p>
-              <p className="mt-5 font-display text-4xl font-black tracking-[-0.07em] 2xl:text-5xl">
-                {isLoading ? 'Loading' : card.value}
-              </p>
-              <p className="mt-3 text-sm leading-6 opacity-70">{card.detail}</p>
-              <Button className="mt-6" onClick={card.action} variant={card.tone === 'cream' ? 'primary' : 'ghost'}>
-                {card.actionLabel}
-              </Button>
+              <div>
+                <p className="mt-5 font-display text-4xl font-black tracking-[-0.07em] 2xl:text-5xl">
+                  {isLoading ? 'Loading' : card.value}
+                </p>
+                <p className="mt-3 text-sm leading-6 opacity-70">{card.detail}</p>
+              </div>
             </Card>
           ))}
         </section>
 
-        <section className="grid gap-4 xl:grid-cols-3 2xl:gap-6">
-          <ModuleActionCard
-            description="Review cash movement, filter entries, or create a new transaction."
-            label="Cash module"
-            onOpen={() => onNavigate('transactions')}
-            onPrimaryAction={() => openModal('transaction')}
-            primaryAction="New transaction"
-            title="Transactions"
-          />
-          <ModuleActionCard
-            description="Inspect portfolio base, registered assets, and average cost."
-            label="Portfolio module"
-            onOpen={() => onNavigate('investments')}
-            onPrimaryAction={() => openModal('investment')}
-            primaryAction="New investment"
-            title="Investments"
-          />
-          <ModuleActionCard
-            description="Send a question to the orchestrator and let agents use MCP tools."
-            label="AI module"
-            onOpen={() => onNavigate('ai-desk')}
-            onPrimaryAction={() => onNavigate('ai-desk')}
-            primaryAction="Ask AI"
-            title="AI desk"
-          />
+        <section className="grid auto-rows-fr items-stretch gap-4 xl:grid-cols-[1fr_0.9fr_1.1fr] 2xl:gap-6">
+          <Card>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <Badge>Recent activity</Badge>
+                <h3 className="mt-3 font-display text-3xl font-black tracking-[-0.07em]">
+                  Latest movements
+                </h3>
+              </div>
+              <Button onClick={() => onNavigate('transactions')} variant="secondary">
+                View all
+              </Button>
+            </div>
+            <div className="mt-5 flex flex-1 flex-col gap-3">
+              {recentTransactions.map((transaction) => (
+                <div
+                  className="flex items-center justify-between gap-4 rounded-[1.25rem] bg-white/58 p-4"
+                  key={transaction.id}
+                >
+                  <div>
+                    <p className="font-black text-ink">{transaction.category}</p>
+                    <p className="text-sm text-ink/48">{formatDate(transaction.date)}</p>
+                  </div>
+                  <p
+                    className={`font-display text-xl font-black tracking-[-0.05em] ${
+                      transaction.type === 'INCOME' ? 'text-moss' : 'text-clay'
+                    }`}
+                  >
+                    {formatCurrency(Number(transaction.amount))}
+                  </p>
+                </div>
+              ))}
+              {!isLoading && recentTransactions.length === 0 ? (
+                <p className="rounded-[1.25rem] bg-white/58 p-4 text-sm font-semibold text-ink/58">
+                  No transactions yet.
+                </p>
+              ) : null}
+            </div>
+          </Card>
+
+          <Card tone="ink">
+            <Badge tone="cream">Portfolio pulse</Badge>
+            <h3 className="mt-3 font-display text-3xl font-black tracking-[-0.07em]">
+              Position snapshot
+            </h3>
+            <div className="mt-5 flex flex-1 flex-col gap-3">
+              {recentInvestments.slice(0, 3).map((investment) => (
+                <div
+                  className="flex items-center justify-between gap-4 rounded-[1.25rem] border border-cream/10 bg-cream/8 p-4"
+                  key={investment.id}
+                >
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="h-9 w-9 rounded-full shadow-lg shadow-black/20"
+                      style={{
+                        backgroundColor:
+                          investmentColors[String(investment.id)] ?? 'hsl(182 60% 36%)',
+                      }}
+                    />
+                    <div>
+                      <p className="font-display text-xl font-black tracking-[-0.05em]">
+                        {investment.asset}
+                      </p>
+                      <p className="text-sm text-cream/54">
+                        {Number(investment.quantity).toLocaleString('en-US')} units
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-sm font-black text-cream">
+                    {formatCurrency(Number(investment.averagePrice))}
+                  </p>
+                </div>
+              ))}
+              {!isLoading && recentInvestments.length === 0 ? (
+                <p className="rounded-[1.25rem] border border-cream/10 bg-cream/8 p-4 text-sm text-cream/62">
+                  No investments yet.
+                </p>
+              ) : null}
+            </div>
+            <Button className="mt-5" onClick={() => onNavigate('investments')} variant="ghost">
+              Open portfolio
+            </Button>
+          </Card>
+
+          <Card tone="clay">
+            <Badge tone="cream">Ask next</Badge>
+            <h3 className="mt-3 font-display text-3xl font-black leading-none tracking-[-0.08em]">
+              Questions ready for the assistant.
+            </h3>
+            <div className="mt-5 grid flex-1 content-start gap-3">
+              {aiSuggestions.map((suggestion) => (
+                <button
+                  className="rounded-[1.25rem] border border-white/16 bg-white/14 p-4 text-left text-sm font-bold leading-6 text-cream transition hover:-translate-y-0.5 hover:bg-white/22"
+                  key={suggestion}
+                  onClick={() => askWithPrompt(suggestion)}
+                  type="button"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          </Card>
         </section>
       </>
     )
@@ -457,7 +547,7 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
             <div>
               <Badge>Transactions</Badge>
               <h3 className="mt-3 font-display text-3xl font-black tracking-[-0.07em] 2xl:text-4xl">
-                Cash movement module
+                Transactions
               </h3>
             </div>
             <div className="grid w-full gap-2 sm:w-auto sm:grid-cols-[16rem_auto_auto]">
@@ -517,9 +607,13 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
             {formatCurrency(incomeTotal - expenseTotal)}
           </p>
           <p className="mt-3 text-sm leading-6 text-cream/76">
-            Net cash flow from the currently loaded backend data.
+            Net cash flow from the current records.
           </p>
-          <Button className="mt-6" onClick={() => onNavigate('ai-desk')} variant="ghost">
+          <Button
+            className="mt-6"
+            onClick={() => askWithPrompt('What should I notice about my cash flow?')}
+            variant="ghost"
+          >
             Ask about cash flow
           </Button>
         </Card>
@@ -533,7 +627,7 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
         <Card tone="ink">
           <Badge tone="cream">Investments</Badge>
           <h3 className="mt-3 font-display text-3xl font-black tracking-[-0.07em] 2xl:text-4xl">
-            Portfolio module
+            Portfolio
           </h3>
           <p className="mt-5 font-display text-5xl font-black tracking-[-0.08em]">
             {formatCompactCurrency(investmentCostTotal)}
@@ -553,16 +647,18 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
 
         <Card>
           <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
-            {investments.map((investment, index) => (
+            {investments.map((investment) => (
               <article
                 className="rounded-[1.5rem] border border-ink/8 bg-white/58 p-4"
                 key={investment.id}
               >
                 <div className="flex items-center gap-3">
                   <span
-                    className={`h-10 w-10 rounded-full ${
-                      index % 2 === 0 ? 'bg-lagoon' : 'bg-clay'
-                    }`}
+                    className="h-10 w-10 rounded-full shadow-lg shadow-ink/15"
+                    style={{
+                      backgroundColor:
+                        investmentColors[String(investment.id)] ?? 'hsl(182 60% 36%)',
+                    }}
                   />
                   <div>
                     <p className="font-display text-xl font-black tracking-[-0.05em]">
@@ -596,11 +692,10 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
         <Card tone="clay">
           <Badge tone="cream">AI desk</Badge>
           <h3 className="mt-3 font-display text-3xl font-black leading-none tracking-[-0.08em] 2xl:text-5xl">
-            One entry point for agentic analysis.
+            Ask for patterns, risks, and next moves.
           </h3>
           <p className="mt-4 text-sm leading-6 text-cream/76 2xl:text-base 2xl:leading-7">
-            This panel calls the Kotlin backend, which forwards the request to
-            the Python orchestrator. The agent then uses MCP tools for real data.
+            Use natural language to explore your cash movement and portfolio context.
           </p>
           <form className="mt-5 flex flex-col gap-2 sm:flex-row" onSubmit={handleAiSubmit}>
             <Input
@@ -617,12 +712,12 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
         </Card>
 
         <Card>
-          <Badge tone="clay">Agent response</Badge>
+          <Badge tone="clay">Assistant response</Badge>
           <div className="mt-5 rounded-[1.5rem] border border-ink/8 bg-white/58 p-4 2xl:p-6">
             {aiResponse ? (
               <>
                 <p className="text-sm font-black text-moss">
-                  Routed to {aiResponse.routedTo} by {aiResponse.agent}
+                  Routed to {aiResponse.routedTo}
                 </p>
                 <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-ink/70 2xl:text-base 2xl:leading-7">
                   {aiResponse.response}
@@ -638,7 +733,7 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
             ) : (
               <div>
                 <p className="font-display text-2xl font-black tracking-[-0.06em]">
-                  Ask the system something useful.
+                  Start with one of these prompts.
                 </p>
                 <div className="mt-5 grid gap-3 md:grid-cols-3">
                   {aiSuggestions.map((suggestion) => (
@@ -659,38 +754,78 @@ export function DashboardPage({ activeModule, onNavigate }: DashboardPageProps) 
       </section>
     )
   }
-}
 
-type ModuleActionCardProps = {
-  description: string
-  label: string
-  onOpen: () => void
-  onPrimaryAction: () => void
-  primaryAction: string
-  title: string
-}
+  function renderAboutModule() {
+    const flow = [
+      {
+        description: 'User actions, dashboard modules, and assistant prompts.',
+        label: 'Frontend',
+      },
+      {
+        description: 'REST APIs for finance data, orchestration, and native AI summary.',
+        label: 'Kotlin backend',
+      },
+      {
+        description: 'Routes questions to specialized financial agents.',
+        label: 'Agent orchestrator',
+      },
+      {
+        description: 'Standard tool layer that exposes trusted project capabilities.',
+        label: 'MCP tools',
+      },
+      {
+        description: 'Persistent source for transactions and investments.',
+        label: 'PostgreSQL',
+      },
+      {
+        description: 'Generates contextual explanations from retrieved data.',
+        label: 'LLM',
+      },
+    ]
 
-function ModuleActionCard({
-  description,
-  label,
-  onOpen,
-  onPrimaryAction,
-  primaryAction,
-  title,
-}: ModuleActionCardProps) {
-  return (
-    <Card className="min-h-72">
-      <Badge tone="clay">{label}</Badge>
-      <h3 className="mt-4 font-display text-3xl font-black tracking-[-0.07em]">
-        {title}
-      </h3>
-      <p className="mt-3 text-sm leading-6 text-ink/62">{description}</p>
-      <div className="mt-6 grid gap-2 sm:grid-cols-2">
-        <Button onClick={onPrimaryAction}>{primaryAction}</Button>
-        <Button onClick={onOpen} variant="secondary">
-          Open module
-        </Button>
-      </div>
-    </Card>
-  )
+    return (
+      <section className="grid gap-4 xl:grid-cols-[0.72fr_1.28fr] 2xl:gap-6">
+        <Card tone="ink">
+          <Badge tone="cream">About</Badge>
+          <h3 className="mt-3 font-display text-4xl font-black leading-none tracking-[-0.08em]">
+            How this lab is wired.
+          </h3>
+          <p className="mt-5 text-sm leading-7 text-cream/70">
+            This page keeps the technical story out of the main dashboard, while still making
+            the architecture visible when you want to study or explain the project.
+          </p>
+        </Card>
+
+        <Card>
+          <Badge tone="clay">System flow</Badge>
+          <div className="mt-6 grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+            {flow.map((item, index) => (
+              <article
+                className="relative rounded-[1.5rem] border border-ink/8 bg-white/60 p-4"
+                key={item.label}
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-ink font-black text-cream">
+                  {index + 1}
+                </span>
+                <h4 className="mt-4 font-display text-2xl font-black tracking-[-0.07em]">
+                  {item.label}
+                </h4>
+                <p className="mt-2 text-sm leading-6 text-ink/62">{item.description}</p>
+              </article>
+            ))}
+          </div>
+          <div className="mt-6 rounded-[1.5rem] bg-[linear-gradient(135deg,rgba(31,77,56,0.12),rgba(198,111,69,0.12))] p-5">
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-moss">
+              Orchestration idea
+            </p>
+            <p className="mt-3 text-sm leading-7 text-ink/68">
+              The UI triggers backend APIs. The backend can either serve finance data directly
+              or forward analysis requests to the Python orchestrator. Agents call MCP tools to
+              retrieve real data, then the LLM turns that context into an explanation.
+            </p>
+          </div>
+        </Card>
+      </section>
+    )
+  }
 }

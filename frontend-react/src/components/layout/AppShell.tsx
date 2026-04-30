@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import type { ModuleId } from '../../lib/modules'
-import { modules } from '../../lib/modules'
+import { aboutModule, modules } from '../../lib/modules'
 import { Badge } from '../ui/Badge'
 
 type AppShellProps = {
@@ -47,14 +47,16 @@ export function AppShell({ activeModule, children, onNavigate }: AppShellProps) 
             ))}
           </nav>
 
-          <div className="mt-6 hidden rounded-[1.5rem] border border-cream/10 bg-cream/8 p-4 lg:block">
-            <p className="text-sm font-semibold text-cream">System map</p>
-            <div className="mt-4 space-y-3 text-sm text-cream/66">
-              <p>Kotlin API handles CRUD and Spring AI.</p>
-              <p>Python agents talk to MCP for tool-backed analysis.</p>
-              <p>React becomes the calm cockpit on top.</p>
-            </div>
-          </div>
+          <button
+            className={`mt-6 hidden w-full rounded-[1.5rem] border border-cream/10 p-4 text-left transition hover:bg-cream/10 lg:block ${
+              activeModule === aboutModule.id ? 'bg-cream/14' : 'bg-cream/6'
+            }`}
+            onClick={() => onNavigate(aboutModule.id)}
+            type="button"
+          >
+            <p className="text-sm font-semibold text-cream">{aboutModule.label}</p>
+            <p className="mt-2 text-sm leading-6 text-cream/52">{aboutModule.helper}</p>
+          </button>
         </aside>
 
         <section className="flex min-w-0 flex-1 flex-col gap-4 2xl:gap-6">{children}</section>
