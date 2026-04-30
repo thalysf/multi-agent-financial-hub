@@ -23,6 +23,8 @@ services:
     container_name: financial-hub-backend
     working_dir: /workspace/backend-kotlin
     command: sh -lc "chmod +x mvnw && ./mvnw clean spring-boot:run"
+    env_file:
+      - ./agents-python/.env
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/financial_hub
       SPRING_DATASOURCE_USERNAME: financial_user
@@ -62,3 +64,19 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
+  frontend:
+    image: node:24-alpine
+    container_name: financial-hub-frontend
+    working_dir: /workspace/frontend-react
+    command: sh -lc "npm install && npm run dev -- --host 0.0.0.0"
+    environment:
+      VITE_API_BASE_URL: http://localhost:8080
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./:/workspace
+      - /workspace/frontend-react/node_modules
+    depends_on:
+      backend:
+        condition: service_started

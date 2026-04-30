@@ -4,9 +4,9 @@
 
 This file tracks the real implementation state of the project.
 
-Step 1, Step 2, Step 3, Step 4, Step 5, Step 6, Step 7, and Step 8 have been completed.
+Step 1 through Step 12 have been completed.
 
-Frontend is part of the project specification, but it has not been started yet.
+All currently defined specification steps have been completed.
 
 ## Completed Steps
 
@@ -18,6 +18,10 @@ Frontend is part of the project specification, but it has not been started yet.
 - Step 6 - Multi-Agent System
 - Step 7 - LLM Integration
 - Step 8 - Kotlin to Python Integration
+- Step 9 - Spring AI Integration in Kotlin Backend
+- Step 10 - Frontend Setup
+- Step 11 - Initial Dashboard Interface
+- Step 12 - Frontend to Backend Integration
 
 ## Current Step
 
@@ -25,7 +29,7 @@ Frontend is part of the project specification, but it has not been started yet.
 
 ## Next Steps
 
-- Step 9 - Spring AI Integration in Kotlin Backend
+- No remaining implementation step is defined in `specs.md`
 
 ## Decisions Taken
 
@@ -70,6 +74,33 @@ Frontend is part of the project specification, but it has not been started yet.
 - The backend AI package follows the current MVC/service/client style: `controller`, `service`, `client`, `dto`, and `exception`
 - Step 8 deliberately does not use Spring AI; Spring AI remains Step 9
 - Docker Compose now declares `postgres`, `agents`, and `backend`; project services should continue to run through the root `docker-compose.yml`
+- Spring AI is integrated in the Kotlin backend through `org.springframework.ai:spring-ai-starter-model-openai`
+- The backend uses Spring AI version `1.1.5` through the Spring AI BOM
+- Spring AI follows the same project LLM strategy as the Python agents: Groq first, through an OpenAI-compatible endpoint
+- Spring AI reads `GROQ_API_KEY` and `GROQ_MODEL` from the ignored `agents-python/.env` file through the backend Compose `env_file`
+- The backend Spring AI configuration uses `spring.ai.model.chat=openai`, `spring.ai.openai.base-url=https://api.groq.com/openai`, and model `meta-llama/llama-4-scout-17b-16e-instruct` by default
+- The backend native Spring AI endpoint is `POST /ai/spring/summary`
+- `POST /ai/spring/summary` uses backend module data directly as prompt context instead of calling the Python agent system
+- `POST /ai/analyze` remains the Kotlin-to-Python multi-agent endpoint and continues to call the Python FastAPI service
+- The native Spring AI client is wrapped behind the local `NativeAiClient` interface so tests can mock model calls without using live tokens
+- Backend tests disable the live Spring AI model with `spring.ai.model.chat=none` and provide a mocked `NativeAiClient`
+- Frontend setup uses React 19, TypeScript, Vite 8, and Tailwind CSS 4
+- Tailwind CSS is configured through the official Vite plugin `@tailwindcss/vite`
+- The frontend is declared in the root `docker-compose.yml` as service `frontend` on port `5173`
+- Frontend Docker execution uses `node:24-alpine` and an anonymous container volume for `frontend-react/node_modules`
+- The initial frontend visual direction uses a warm editorial finance dashboard style with cream, moss, lagoon, and clay tones
+- Frontend should continue without `shadcn/ui` unless handcrafted components become a real blocker
+- Frontend UI primitives are handcrafted in `frontend-react/src/components/ui/`
+- The main dashboard layout lives in `frontend-react/src/components/layout/AppShell.tsx`
+- The initial dashboard page lives in `frontend-react/src/pages/DashboardPage.tsx`
+- Step 11 uses local preview data only; live backend data starts in Step 12
+- Step 12 connects the frontend to live Kotlin backend APIs through `frontend-react/src/lib/api.ts`
+- The frontend reads the backend URL from `VITE_API_BASE_URL`, defaulting to `http://localhost:8080`
+- The dashboard now loads real transactions from `GET /transactions`
+- The dashboard now loads real investments from `GET /investments`
+- The AI desk submits prompts to `POST /ai/analyze` and displays the routed agent response plus tools used
+- Frontend summary cards are calculated from live backend data instead of static preview arrays
+- Backend CORS is configured in `backend-kotlin/src/main/kotlin/com/financialhub/backend/config/WebConfig.kt` for `http://localhost:5173` and `http://127.0.0.1:5173`
 
 ## Problems Found
 
@@ -79,6 +110,9 @@ Frontend is part of the project specification, but it has not been started yet.
 - The `pip` command is not directly available in the local PowerShell environment, so Python package installation should use `python -m pip`
 - Running backend Maven tests with `spring.jpa.hibernate.ddl-auto=create-drop` against the Compose PostgreSQL database can wipe current local data; reseed transactions/investments afterward if manual end-to-end validation needs real rows
 - `docker compose run backend ...` may start dependent services such as `agents` because of Compose dependencies
+- Spring AI auto-configuration did not expose a usable `ChatClient.Builder`/`ChatModel` bean in the Compose runtime during Step 9 validation; the project now manually builds an `OpenAiChatModel` with Spring AI classes inside `SpringAiNativeClient`
+- Backend tests currently show a Spring Boot `MockBean` deprecation warning and Mockito dynamic agent warnings; both are non-blocking for the current step
+- The Vite scaffold initially created default demo assets and files; unused React/Vite template assets were removed after Step 12
 
 ## Notes
 
@@ -114,6 +148,37 @@ Frontend is part of the project specification, but it has not been started yet.
 - Step 8 backend test validation passed with `docker compose run --rm -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/financial_hub backend ./mvnw test`
 - Step 8 Python validation passed with `python tests/smoke_test.py`, `python tests/live_groq_smoke_test.py`, `python -m compileall -q src tests`, and `python -m pip check` inside `agents-python/.venv`
 - Step 8 end-to-end validation passed through Docker Compose with `POST http://localhost:8080/ai/analyze`
+- Spring AI implementation now exists in `backend-kotlin/src/main/kotlin/com/financialhub/backend/ai/client/` and `backend-kotlin/src/main/kotlin/com/financialhub/backend/ai/service/SpringAiSummaryService.kt`
+- Step 9 added DTOs for backend-native Spring AI summaries in `backend-kotlin/src/main/kotlin/com/financialhub/backend/ai/dto/`
+- Step 9 updated `backend-kotlin/src/main/resources/application.yml` with Spring AI/OpenAI-compatible Groq configuration
+- Step 9 updated `docker-compose.yml` so the backend reads the ignored `agents-python/.env` file without committing secrets
+- Step 9 backend test validation passed with `docker compose run --rm -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/financial_hub backend ./mvnw test`
+- Step 9 test suite result: 5 tests, 0 failures, 0 errors, 0 skipped
+- Step 9 live validation passed through Docker Compose with `POST http://localhost:8080/ai/spring/summary`
+- Live Spring AI validation returned provider `groq-via-spring-ai-openai-compatible`, model `meta-llama/llama-4-scout-17b-16e-instruct`, and context from real backend data
+- Frontend implementation now exists in `frontend-react/`
+- Step 10 replaced the default Vite screen with a Financial Hub base layout using Tailwind utility classes
+- Step 10 validation passed with `npm run build`
+- Step 10 validation passed with `npm run lint`
+- Step 10 Docker Compose validation passed with `docker compose up -d frontend` and `GET http://localhost:5173` returning HTTP 200
+- Step 11 added reusable frontend primitives: `Button`, `Card`, `Badge`, `Input`, and `Table`
+- Step 11 added a polished responsive dashboard with sidebar, top area, summary cards, transaction list, investment section, and AI entry point
+- Step 11 validation passed with `npm run build`
+- Step 11 validation passed with `npm run lint`
+- Step 12 added frontend API client types and request helpers in `frontend-react/src/lib/api.ts`
+- Step 12 added formatting helpers in `frontend-react/src/lib/format.ts`
+- Step 12 updated the dashboard to fetch live backend data on page load and submit AI prompts
+- Step 12 backend validation passed with `docker compose run --rm -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/financial_hub backend ./mvnw test`
+- Step 12 backend test result: 5 tests, 0 failures, 0 errors, 0 skipped
+- Step 12 frontend validation passed with `npm run build`
+- Step 12 frontend validation passed with `npm run lint`
+- Step 12 live validation passed after `docker compose up -d --force-recreate backend frontend`
+- Live validation confirmed `GET http://localhost:5173` returns HTTP 200
+- Live validation confirmed frontend CORS access from `Origin: http://localhost:5173` to `GET /transactions`
+- Live validation confirmed `GET /transactions` and `GET /investments` return real seeded data
+- Live validation confirmed `POST /ai/analyze` returns a Groq-generated agent response through Kotlin backend, Python agents, MCP, and PostgreSQL
+- Post-Step 12 cleanup removed unused Vite/React scaffold assets and replaced the favicon with a Financial Hub SVG
+- Post-cleanup frontend validation passed again with `npm run build` and `npm run lint`
 - Manual end-to-end validation seeded:
   - transaction: `EXPENSE`, amount `125.75`, category `Groceries`, date `2026-04-29`
   - investment: asset `VALE3`, quantity `900.0000`, averagePrice `84.32`
@@ -124,5 +189,6 @@ Frontend is part of the project specification, but it has not been started yet.
   - Specialized agent calls MCP tools (`get_transactions` or `get_investments`)
   - MCP reads PostgreSQL
   - Groq generates the final natural-language response from real tool output
-- Current recommended next step is Step 9 - Spring AI Integration in Kotlin Backend
-- For the next session, read `specs.md` and this `AGENTS.md` first; do not start frontend yet because Step 9 comes before frontend setup
+- Current recommended next step is post-spec hardening: add frontend tests, improve empty/loading states, and consider CRUD forms
+- The frontend should remain intentionally polished, intuitive, and responsive
+- For the next session, read `specs.md` and this `AGENTS.md` first; all currently defined steps are complete

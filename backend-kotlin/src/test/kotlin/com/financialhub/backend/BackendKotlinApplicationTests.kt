@@ -1,6 +1,7 @@
 package com.financialhub.backend
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.financialhub.backend.ai.client.NativeAiClient
 import com.financialhub.backend.investments.InvestmentModule
 import com.financialhub.backend.investments.repository.InvestmentRepository
 import com.financialhub.backend.modules.FinancialModuleRegistry
@@ -12,9 +13,12 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import org.mockito.ArgumentMatchers.anyString
+import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.http.MediaType
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.servlet.MockMvc
@@ -32,6 +36,7 @@ import java.net.InetSocketAddress
     properties = [
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "agents.base-url=http://localhost:18080",
+        "spring.ai.model.chat=none",
     ],
 )
 class BackendKotlinApplicationTests {
@@ -56,6 +61,9 @@ class BackendKotlinApplicationTests {
     @Autowired
     private lateinit var investmentModule: InvestmentModule
 
+    @MockBean
+    private lateinit var nativeAiClient: NativeAiClient
+
     @Test
     fun `ai analyze forwards request to agents service`() {
         val request =
@@ -74,6 +82,59 @@ class BackendKotlinApplicationTests {
             .andExpect(jsonPath("$.routingReason").value("test route"))
             .andExpect(jsonPath("$.response").value("test agent response"))
             .andExpect(jsonPath("$.toolsUsed[0]").value("get_transactions"))
+    }
+
+    @Test
+    fun `spring ai summary uses backend data as prompt context`() {
+        Mockito.`when`(nativeAiClient.generate(anyString(), anyString()))
+            .thenReturn("native Spring AI summary")
+
+        transactionRepository.deleteAll()
+        investmentRepository.deleteAll()
+
+        mockMvc
+            .perform(
+                post("/transactions")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        objectMapper.writeValueAsString(
+                            mapOf(
+                                "type" to "EXPENSE",
+                                "amount" to "125.75",
+                                "category" to "Groceries",
+                                "date" to "2026-04-29",
+                            ),
+                        ),
+                    ),
+            ).andExpect(status().isCreated)
+
+        mockMvc
+            .perform(
+                post("/investments")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        objectMapper.writeValueAsString(
+                            mapOf(
+                                "asset" to "VALE3",
+                                "quantity" to "900.0000",
+                                "averagePrice" to "84.32",
+                            ),
+                        ),
+                    ),
+            ).andExpect(status().isCreated)
+
+        mockMvc
+            .perform(
+                post("/ai/spring/summary")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(mapOf("question" to "Summarize my current finances"))),
+            ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.provider").value("groq-via-spring-ai-openai-compatible"))
+            .andExpect(jsonPath("$.response").value("native Spring AI summary"))
+            .andExpect(jsonPath("$.context.transactionCount").value(1))
+            .andExpect(jsonPath("$.context.investmentCount").value(1))
+            .andExpect(jsonPath("$.context.expenseTotal").value("125.75"))
+            .andExpect(jsonPath("$.context.investmentCostTotal").value("75888.000000"))
     }
 
     @Test

@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Space Grotesk", "Aptos Display", "Trebuchet MS", sans-serif;
+  --font-body: "Manrope", "Aptos", "Segoe UI", sans-serif;
+  --color-ink: #13201a;
+  --color-moss: #1f4d38;
+  --color-fern: #4f7f52;
+  --color-sand: #f4ead7;
+  --color-cream: #fffaf0;
+  --color-clay: #c66f45;
+  --color-lagoon: #1d6f73;
+}
+
+:root {
+  color: #13201a;
+  background: #f4ead7;
+  font-family: var(--font-body);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+#root {
+  min-height: 100vh;
+}
